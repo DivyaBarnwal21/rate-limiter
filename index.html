@@ -1,0 +1,1903 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ChaiPay Engineering: Rate Limiter Masterclass with Bouncer Bhaiya</title>
+  <meta name="description" content="A 45-minute interactive story-driven masterclass on designing rate limiters using Token Bucket and Sliding Window algorithms at ChaiPay." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<!-- Accessibility skip link -->
+<a class="skip-link" href="#main-content">Skip to main content</a>
+
+<!-- Confetti Canvas for Gamification -->
+<canvas id="confetti-canvas"></canvas>
+
+<!-- Gamification Toasts -->
+<div id="xp-toast" role="status" aria-live="polite">+50 XP! ⚡</div>
+<div id="badge-toast" role="alert" aria-live="polite">
+  <div class="badge-toast-icon" id="badge-toast-icon">🛡️</div>
+  <div>
+    <div class="badge-toast-label">Badge Unlocked!</div>
+    <div class="badge-toast-name" id="badge-toast-name">Bouncer Rookie</div>
+    <div class="badge-toast-quote" id="badge-toast-quote">"Server bach gaya, welcome to ChaiPay!"</div>
+  </div>
+</div>
+
+<!-- ════════════════════════ TOP HEADER ════════════════════════ -->
+<header id="site-header" role="banner">
+  <button id="mobile-menu-btn" aria-label="Toggle mission roadmap" aria-expanded="false">☰</button>
+
+  <div class="logo" aria-label="ChaiPay Engineering">
+    <div class="logo-icon">☕</div>
+    <span>ChaiPay <span style="color:var(--saffron);font-weight:800;">Dev</span></span>
+  </div>
+
+  <!-- Gamified XP and Level Bar (keeps role="progressbar" for test suite) -->
+  <div id="progress-bar-wrap" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" aria-label="Lesson progress">
+    <div class="xp-meta">
+      <div class="xp-level">
+        <span>🎖️</span> <span id="xp-level-title">Trainee Bouncer</span>
+      </div>
+      <div id="xp-count">0 / 700 XP</div>
+    </div>
+    <div id="progress-bar-track">
+      <div id="progress-bar-fill"></div>
+    </div>
+    <!-- Hidden element kept for backwards compatibility with test suite -->
+    <span id="time-remaining" style="display:none;" aria-live="polite">45 min left</span>
+  </div>
+
+  <!-- Unlocked Badges Tray -->
+  <div class="header-badges" id="header-badges" title="Unlocked Badges">
+    <!-- Badges populated dynamically -->
+  </div>
+
+  <button id="theme-toggle" style="display:none;" aria-label="Toggle dark/light mode" title="Toggle theme">🌙</button>
+</header>
+
+<!-- ════════════════════════ HERO LANDING SECTION ════════════════════════ -->
+<section id="hero" aria-labelledby="hero-title">
+  <div class="hero-bg"></div>
+  <div class="hero-floats">
+    <span class="float-emoji" style="left:8%; animation-duration:14s; animation-delay:0s;">☕</span>
+    <span class="float-emoji" style="left:24%; animation-duration:18s; animation-delay:2s;">🛡️</span>
+    <span class="float-emoji" style="left:45%; animation-duration:12s; animation-delay:5s;">🪣</span>
+    <span class="float-emoji" style="left:68%; animation-duration:16s; animation-delay:1s;">🚂</span>
+    <span class="float-emoji" style="left:88%; animation-duration:15s; animation-delay:4s;">⚡</span>
+  </div>
+
+  <div class="hero-content">
+    <div class="chaipay-brand">
+      <div class="chaipay-icon">₹</div>
+      <div class="chaipay-name">ChaiPay <span>UPI Security Ops</span></div>
+    </div>
+
+    <h1 class="hero-title" id="hero-title">
+      Don't let your API get <span class="accent-saffron">Tatkal'd!</span> 🚂💨
+    </h1>
+
+    <p class="hero-subtitle">
+      It's Day 1 of your backend internship at <strong>ChaiPay</strong> — India's fastest-growing UPI payments app.
+      A rogue botnet is hammering our login servers with 10,000 requests every second!
+      Grab a cutting chai ☕, team up with <strong>Bouncer Bhaiya</strong>, and build an unbreakable rate limiter from scratch.
+    </p>
+
+    <!-- Bouncer Bhaiya Mascot in Hero -->
+    <div class="hero-mascot">
+      <div class="hero-bouncer-svg">
+        <svg viewBox="0 0 100 120" width="80" height="96" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+          <path d="M15 110 C 15 80, 30 70, 50 70 C 70 70, 85 80, 85 110 Z" fill="#1c1838" stroke="#ff7a2b" stroke-width="3"/>
+          <path d="M42 70 L50 85 L58 70" stroke="#ff7a2b" stroke-width="2" fill="#251f47"/>
+          <rect x="46" y="86" width="8" height="12" rx="2" fill="#ffd60a"/>
+          <rect x="42" y="55" width="16" height="18" fill="#e09f67" rx="3"/>
+          <ellipse cx="50" cy="42" rx="22" ry="24" fill="#f0b27a"/>
+          <path d="M26 36 C 26 20, 36 14, 50 14 C 64 14, 74 20, 74 36 C 68 28, 58 26, 50 26 C 42 26, 32 28, 26 36 Z" fill="#0d0a1a"/>
+          <circle cx="27" cy="42" r="5" fill="#e09f67"/>
+          <circle cx="73" cy="42" r="5" fill="#e09f67"/>
+          <path d="M32 38 Q 40 34 47 38 L 47 44 Q 40 48 33 45 Z" fill="#111" stroke="#ffd60a" stroke-width="1.8"/>
+          <path d="M53 38 Q 60 34 68 38 L 67 45 Q 60 48 53 44 Z" fill="#111" stroke="#ffd60a" stroke-width="1.8"/>
+          <line x1="47" y1="39" x2="53" y2="39" stroke="#ffd60a" stroke-width="2"/>
+          <line x1="36" y1="39" x2="42" y2="44" stroke="#fff" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
+          <line x1="57" y1="39" x2="63" y2="44" stroke="#fff" stroke-width="1" stroke-linecap="round" opacity="0.6"/>
+          <path d="M36 54 C 42 51, 47 53, 50 56 C 53 53, 58 51, 64 54 C 68 56, 67 60, 60 58 C 54 56, 52 58, 50 57 C 48 58, 46 56, 40 58 C 33 60, 32 56, 36 54 Z" fill="#0d0a1a"/>
+          <path d="M44 63 Q 50 66 56 63" stroke="#8c4e28" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <div class="hero-bubble">
+        "Arre fresher babu! 10,000 requests ek second mein aa rahe hain! Ye login API hai ya college canteen ka free samosa counter?! Bina token kisi ko andar nahi jaane dunga!"
+      </div>
+    </div>
+
+    <!-- Lesson Intro & Outcomes Card -->
+    <div class="lesson-intro-card">
+      <h3>🎓 What You'll Be Able to Do in 45 Minutes</h3>
+      <p style="font-size:0.9rem; color:var(--text-muted); margin-bottom:0.75rem;">
+        No boring textbook theories. Here are the 3 superpowers you'll earn today:
+      </p>
+      <div class="outcomes-grid">
+        <div class="outcome-item">
+          <div class="outcome-icon">🛡️</div>
+          <div><strong>Stop API Crashes:</strong> Diagnose why unprotected servers melt under bot traffic, Tatkal surges, and brute force attacks.</div>
+        </div>
+        <div class="outcome-item">
+          <div class="outcome-icon">💻</div>
+          <div><strong>Code the Algorithms:</strong> Write both <em>Token Bucket</em> and <em>Sliding Window</em> in pure JavaScript using production-ready lazy refill.</div>
+        </div>
+        <div class="outcome-item">
+          <div class="outcome-icon">⚡</div>
+          <div><strong>Ship Distributed Redis:</strong> Architect multi-server rate limiting with atomic Redis Lua scripts and standard HTTP 429 headers.</div>
+        </div>
+      </div>
+      <div class="prereq-line">
+        💡 <strong>Prerequisites:</strong> Basic JavaScript (variables, functions, objects, and if/else). Zero prior backend or security experience required!
+      </div>
+    </div>
+
+    <div style="margin-top:1.5rem;">
+      <a href="#section-0" class="btn-hero" onclick="goToSection(0)" aria-label="Start Lesson">
+        🚀 Start Mission #0
+      </a>
+    </div>
+
+    <div class="hero-stats">
+      <div class="hero-stat"><span>⏱️</span> 45 Min Total</div>
+      <div class="hero-stat"><span>🎯</span> 7 Tactical Missions</div>
+      <div class="hero-stat"><span>💻</span> 1 Coding Challenge</div>
+      <div class="hero-stat"><span>🥊</span> 2 Bonus Sections</div>
+    </div>
+  </div>
+
+  <div class="hero-scroll" aria-hidden="true">
+    <span>Scroll down to enter ChaiPay security control</span>
+    <span>↓</span>
+  </div>
+</section>
+
+<!-- ════════════════════════ MAIN LAYOUT ════════════════════════ -->
+<div id="layout">
+
+  <!-- ══════════ JOURNEY MAP SIDEBAR ══════════ -->
+  <nav id="sidebar" aria-label="Lesson mission navigation">
+    <div class="sidebar-brand">
+      <div class="sidebar-brand-icon">👮</div>
+      <div class="sidebar-brand-text">
+        <div class="sidebar-brand-name">Mission Roadmap</div>
+        <div class="sidebar-brand-sub">ChaiPay Security Academy</div>
+      </div>
+    </div>
+
+    <div class="journey-map" role="tablist">
+      <div id="journey-fill" aria-hidden="true"></div>
+
+      <button class="sidebar-item active" data-section="0" role="tab" aria-selected="true" aria-controls="section-0" id="tab-0">
+        <div class="node-circle">0</div>
+        <div class="node-label">
+          <span class="node-title">🚨 The Attack</span>
+          <span class="node-time">0–4 min · 50 XP</span>
+        </div>
+        <div class="node-badge-slot" id="node-badge-0">🛡️</div>
+      </button>
+
+      <button class="sidebar-item" data-section="1" role="tab" aria-selected="false" aria-controls="section-1" id="tab-1">
+        <div class="node-circle">1</div>
+        <div class="node-label">
+          <span class="node-title">🚦 Rate Limiting 101</span>
+          <span class="node-time">4–9 min · 75 XP</span>
+        </div>
+        <div class="node-badge-slot" id="node-badge-1">🎟️</div>
+      </button>
+
+      <button class="sidebar-item" data-section="2" role="tab" aria-selected="false" aria-controls="section-2" id="tab-2">
+        <div class="node-circle">2</div>
+        <div class="node-label">
+          <span class="node-title">🪣 Token Bucket</span>
+          <span class="node-time">9–19 min · 125 XP</span>
+        </div>
+        <div class="node-badge-slot" id="node-badge-2">🪣</div>
+      </button>
+
+      <button class="sidebar-item" data-section="3" role="tab" aria-selected="false" aria-controls="section-3" id="tab-3">
+        <div class="node-circle">3</div>
+        <div class="node-label">
+          <span class="node-title">🪟 Sliding Window</span>
+          <span class="node-time">19–29 min · 150 XP</span>
+        </div>
+        <div class="node-badge-slot" id="node-badge-3">🪟</div>
+      </button>
+
+      <button class="sidebar-item" data-section="4" role="tab" aria-selected="false" aria-controls="section-4" id="tab-4">
+        <div class="node-circle">4</div>
+        <div class="node-label">
+          <span class="node-title">📊 Comparison</span>
+          <span class="node-time">29–34 min · 75 XP</span>
+        </div>
+        <div class="node-badge-slot" id="node-badge-4">⚖️</div>
+      </button>
+
+      <button class="sidebar-item" data-section="5" role="tab" aria-selected="false" aria-controls="section-5" id="tab-5">
+        <div class="node-circle">5</div>
+        <div class="node-label">
+          <span class="node-title">🌐 Real-World Redis</span>
+          <span class="node-time">34–39 min · 100 XP</span>
+        </div>
+        <div class="node-badge-slot" id="node-badge-5">⚡</div>
+      </button>
+
+      <button class="sidebar-item" data-section="6" role="tab" aria-selected="false" aria-controls="section-6" id="tab-6">
+        <div class="node-circle">6</div>
+        <div class="node-label">
+          <span class="node-title">🏆 Final Challenge</span>
+          <span class="node-time">39–45 min · 125 XP</span>
+        </div>
+        <div class="node-badge-slot" id="node-badge-6">🏆</div>
+      </button>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-xp">
+        <span>🏆 Total Earned:</span> <span id="sidebar-xp-total">0</span> XP
+      </div>
+      <button id="btn-reset-progress" class="btn btn-secondary btn-sm" style="margin-top:0.6rem; width:100%; font-size:0.75rem; justify-content:center;" title="Reset all progress and badges">🔄 Reset Progress</button>
+    </div>
+  </nav>
+
+  <!-- ══════════ MAIN CONTENT ══════════ -->
+  <main id="main">
+    <div id="main-content" tabindex="-1"></div>
+
+    <!-- ════════════════════════════════════════════════════════
+         MISSION 0 — The Attack (0–5 min)
+    ═══════════════════════════════════════════════════════════ -->
+    <section class="lesson-section active" id="section-0" aria-labelledby="s0-title" role="tabpanel">
+
+      <div class="mission-card mission-0">
+        <div class="mission-num">00</div>
+        <div>
+          <div class="mission-eyebrow">Mission 0 · 0 to 4 Min</div>
+          <h2 class="mission-title-text" id="s0-title">🚨 The 10,000 Req/s Login Attack</h2>
+        </div>
+        <div class="mission-time-chip">50 XP · 🛡️ Rookie Badge</div>
+      </div>
+
+      <div class="bouncer-row">
+        <div class="bouncer-figure">
+          <svg viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Bouncer Bhaiya">
+            <path d="M15 110 C 15 80, 30 70, 50 70 C 70 70, 85 80, 85 110 Z" fill="#1c1838" stroke="#ff7a2b" stroke-width="3"/>
+            <path d="M42 70 L50 85 L58 70" stroke="#ff7a2b" stroke-width="2" fill="#251f47"/>
+            <rect x="46" y="86" width="8" height="12" rx="2" fill="#ffd60a"/>
+            <rect x="42" y="55" width="16" height="18" fill="#e09f67" rx="3"/>
+            <ellipse cx="50" cy="42" rx="22" ry="24" fill="#f0b27a"/>
+            <path d="M26 36 C 26 20, 36 14, 50 14 C 64 14, 74 20, 74 36 C 68 28, 58 26, 50 26 C 42 26, 32 28, 26 36 Z" fill="#0d0a1a"/>
+            <circle cx="27" cy="42" r="5" fill="#e09f67"/>
+            <circle cx="73" cy="42" r="5" fill="#e09f67"/>
+            <path d="M32 38 Q 40 34 47 38 L 47 44 Q 40 48 33 45 Z" fill="#111" stroke="#ffd60a" stroke-width="1.8"/>
+            <path d="M53 38 Q 60 34 68 38 L 67 45 Q 60 48 53 44 Z" fill="#111" stroke="#ffd60a" stroke-width="1.8"/>
+            <line x1="47" y1="39" x2="53" y2="39" stroke="#ffd60a" stroke-width="2"/>
+            <path d="M36 54 C 42 51, 47 53, 50 56 C 53 53, 58 51, 64 54 C 68 56, 67 60, 60 58 C 54 56, 52 58, 50 57 C 48 58, 46 56, 40 58 C 33 60, 32 56, 36 54 Z" fill="#0d0a1a"/>
+            <path d="M44 63 Q 50 66 56 63" stroke="#8c4e28" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="bouncer-bubble">
+          "Bhai! Subah ke 10:00 baje hain aur IRCTC Tatkal jaisa scene ho gaya! Ek akela botnet hamare <code>/api/login</code> pe 10,000 requests per second phenk raha hai. Bina bouncer ke server 503 maar ke dher ho gaya!"
+        </div>
+      </div>
+
+      <p>
+        <strong>What happens when 1 lakh people open IRCTC at 10:00 AM for Tatkal train tickets?</strong><br />
+        The app freezes, spinners keep spinning forever, and genuine travelers get kicked out.
+      </p>
+      <p>
+        Right now, ChaiPay is facing that exact nightmare. An attacker with a leaked password database is attempting 10,000 logins every single second on our <code>POST /api/login</code> endpoint.
+      </p>
+
+      <div class="simple-words-box">
+        <strong>In simple words:</strong> Rate Limiting is a digital security bouncer standing at your server door, enforcing: <em>"Only 5 attempts per minute, dost — wait your turn!"</em>
+      </div>
+
+      <!-- Live Simulator -->
+      <div class="card">
+        <div class="card-title">🎮 Live Demo: ChaiPay Server Under Attack</div>
+        <p style="font-size:.88rem;color:var(--text-muted);margin-bottom:1rem;">
+          Click <strong>"Start Attack"</strong> to watch what happens to an unprotected server versus a server guarded by Bouncer Bhaiya's rate limiter.
+        </p>
+
+        <div class="server-demo">
+          <!-- Without rate limiter -->
+          <div class="server-panel" id="panel-no-rl">
+            <h4>❌ Unprotected Server (No Bouncer)</h4>
+            <span class="server-icon" id="server-icon-bad">🖥️</span>
+            <div class="request-counter" id="req-count-bad">0</div>
+            <div style="font-size:.72rem;color:var(--text-muted);margin-bottom:.4rem;">incoming req/s (all hitting database!)</div>
+            <div class="server-status idle" id="server-status-bad">Idle</div>
+            <div class="load-bar-wrap" aria-label="Server load">
+              <div class="load-bar" id="load-bar-bad" style="background:var(--danger);"></div>
+            </div>
+          </div>
+
+          <!-- With rate limiter -->
+          <div class="server-panel" id="panel-with-rl">
+            <h4>✅ Bouncer Protected (ChaiPay Limiter)</h4>
+            <span class="server-icon" id="server-icon-good">🖥️</span>
+            <div class="request-counter" id="req-count-good">0</div>
+            <div style="font-size:.72rem;color:var(--text-muted);margin-bottom:.4rem;">allowed req/s (capped safely)</div>
+            <div class="server-status idle" id="server-status-good">Idle</div>
+            <div class="load-bar-wrap" aria-label="Protected server load">
+              <div class="load-bar" id="load-bar-good" style="background:var(--success);"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-group">
+          <button class="btn btn-primary" id="btn-start-attack">💥 Start 10,000 Req/s Attack</button>
+          <button class="btn btn-secondary" id="btn-stop-attack" disabled>🛑 Stop Attack</button>
+        </div>
+      </div>
+
+      <!-- Think About It Box -->
+      <div class="think-pause-box">
+        <div class="think-q">
+          🤔 <strong>Think About It:</strong> Why can't a modern cloud server with 16 CPU cores just easily handle 10,000 login requests per second?
+        </div>
+        <div class="think-answer">
+          Password checking is deliberately slow! To protect passwords, servers use heavy cryptographic algorithms like <code>bcrypt</code> or <code>Argon2</code>. Each check takes ~100ms of intense CPU math. Doing 10,000 of those in one second requires 1,000 dedicated CPUs! Without a rate limiter, CPU hits 100% instantly and the database crashes.
+        </div>
+        <button class="think-reveal-btn">👉 Click to reveal Bouncer Bhaiya's answer</button>
+      </div>
+
+      <!-- Common Confusion Box -->
+      <div class="common-confusion-box">
+        <strong>⚠️ Beginner Mistake:</strong> Thinking <em>"I'll just add more server RAM or CPU on AWS!"</em><br />
+        Scaling hardware doesn't stop attackers; it just multiplies your cloud bill 10x while the bot floods you with 50,000 req/s instead. You need software traffic control at the gateway!
+      </div>
+
+      <!-- Why Does This Matter? Collapsible -->
+      <details class="why-matter-box">
+        <summary>🏢 Why does this matter in real products? (IRCTC, Swiggy, Credential Stuffing)</summary>
+        <div style="margin-top:0.6rem;">
+          In 2023, automated bots caused over $1.2 billion in server downtime globally. When Indian railways opens Tatkal booking at 10 AM, malicious automated booking extensions try to grab tickets in 50 milliseconds. Rate limiters are the first line of defense that keeps services alive for real human beings.
+        </div>
+      </details>
+
+      <!-- Key Takeaways (Max 3 bullets) -->
+      <div class="takeaway-card">
+        <div class="takeaway-title">🎯 Mission 0 Key Takeaways</div>
+        <ul>
+          <li>Expensive backend operations (like password hashing) choke CPUs instantly when hit by unmetered bot spikes.</li>
+          <li>A rate limiter acts as an early firewall, dropping malicious floods before they ever touch your database.</li>
+          <li>Capping traffic protects legitimate paying users so your app stays fast and online.</li>
+        </ul>
+      </div>
+
+      <div class="nav-btn-row">
+        <button class="btn btn-success btn-complete-mission" data-mission="0">✓ Complete Mission 0 (+50 XP)</button>
+        <button class="btn btn-primary" onclick="goToSection(1)">Next: Rate Limiting 101 →</button>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
+         MISSION 1 — Rate Limiting 101 (5–10 min)
+    ═══════════════════════════════════════════════════════════ -->
+    <section class="lesson-section" id="section-1" aria-labelledby="s1-title" role="tabpanel">
+
+      <div class="mission-card mission-1">
+        <div class="mission-num">01</div>
+        <div>
+          <div class="mission-eyebrow">Mission 1 · 4 to 9 Min</div>
+          <h2 class="mission-title-text" id="s1-title">🚦 Rate Limiting 101: Metro Gates, HTTP 429 &amp; Retry-After</h2>
+        </div>
+        <div class="mission-time-chip">75 XP · 🎟️ Gatekeeper Badge</div>
+      </div>
+
+      <div class="bouncer-row">
+        <div class="bouncer-figure">
+          <svg viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Bouncer Bhaiya">
+            <path d="M15 110 C 15 80, 30 70, 50 70 C 70 70, 85 80, 85 110 Z" fill="#1c1838" stroke="#00d4b0" stroke-width="3"/>
+            <path d="M42 70 L50 85 L58 70" stroke="#00d4b0" stroke-width="2" fill="#251f47"/>
+            <rect x="46" y="86" width="8" height="12" rx="2" fill="#ffd60a"/>
+            <rect x="42" y="55" width="16" height="18" fill="#e09f67" rx="3"/>
+            <ellipse cx="50" cy="42" rx="22" ry="24" fill="#f0b27a"/>
+            <path d="M26 36 C 26 20, 36 14, 50 14 C 64 14, 74 20, 74 36 C 68 28, 58 26, 50 26 C 42 26, 32 28, 26 36 Z" fill="#0d0a1a"/>
+            <circle cx="27" cy="42" r="5" fill="#e09f67"/>
+            <circle cx="73" cy="42" r="5" fill="#e09f67"/>
+            <path d="M32 38 Q 40 34 47 38 L 47 44 Q 40 48 33 45 Z" fill="#111" stroke="#ffd60a" stroke-width="1.8"/>
+            <path d="M53 38 Q 60 34 68 38 L 67 45 Q 60 48 53 44 Z" fill="#111" stroke="#ffd60a" stroke-width="1.8"/>
+            <line x1="47" y1="39" x2="53" y2="39" stroke="#ffd60a" stroke-width="2"/>
+            <path d="M36 54 C 42 51, 47 53, 50 56 C 53 53, 58 51, 64 54 C 68 56, 67 60, 60 58 C 54 56, 52 58, 50 57 C 48 58, 46 56, 40 58 C 33 60, 32 56, 36 54 Z" fill="#0d0a1a"/>
+            <path d="M44 63 Q 50 66 56 63" stroke="#8c4e28" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="bouncer-bubble">
+          "Kabhi Metro station ka automatic AFC gate dekha hai? Ek baar mein ek hi banda smart card tap karke nikal sakta hai. Agar 50 log ek sath gate todne ki koshish karenge toh 'BEEP BEEP' bajega aur gate lock! Yahi hai Rate Limiting."
+        </div>
+      </div>
+
+      <p>
+        <strong>Why can't our server just process every request as fast as possible?</strong><br />
+        Because servers have finite memory, database sockets, and third-party API quotas (like SMS gateways or bank payment switches).
+      </p>
+      <p>
+        A rate limiter sets a fair boundary: <em>"You may send at most 10 requests every 60 seconds."</em> If you exceed that limit, the server politely tells you to back off.
+      </p>
+
+      <div class="simple-words-box">
+        <strong>In simple words:</strong> HTTP <code>429 Too Many Requests</code> means <em>"Bhai slow down, you knocked too fast!"</em>, and the <code>Retry-After</code> header tells you <em>"Wait 30 seconds before trying again."</em>
+      </div>
+
+      <!-- Real World Examples Grid -->
+      <div class="card">
+        <div class="card-title">🌍 Where You Encounter Rate Limits Every Day</div>
+        <div class="use-case-grid">
+          <div class="use-case-card">
+            <h4>🔐 Login Protection</h4>
+            <p>Limit each IP to 5 failed attempts per 15 minutes. Stops brute-force password guessing dead in its tracks.</p>
+          </div>
+          <div class="use-case-card">
+            <h4>💸 UPI Payments API</h4>
+            <p>Limit users to 3 OTP requests per minute. Prevents accidental double debits and saves hefty SMS vendor fees.</p>
+          </div>
+          <div class="use-case-card">
+            <h4>🐙 GitHub API</h4>
+            <p>Gives developers 5,000 requests per hour with an authenticated token, or 60 per hour for anonymous users.</p>
+          </div>
+          <div class="use-case-card">
+            <h4>💳 Stripe Checkout</h4>
+            <p>Default rate limit is about 100 operations/sec in live mode and about 25/sec in test mode per account, isolating buggy merchant loops.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Standard HTTP Headers Card -->
+      <div class="card">
+        <div class="card-title">📋 Common Rate Limiting HTTP Headers</div>
+        <p style="font-size:0.9rem; margin-bottom:1rem;">
+          When an API rejects or meters your request, response headers communicate status to client apps. <em>(Note: <code>Retry-After</code> is a standardized HTTP header per RFC 7231 &amp; RFC 6585, while <code>X-RateLimit-*</code> headers are a widely adopted convention rather than a formal standard):</em>
+        </p>
+
+        <div class="code-wrap">
+          <button class="copy-btn" aria-label="Copy HTTP response headers">Copy</button>
+          <pre><code><span style="color:#ff7a2b;">HTTP/1.1 429 Too Many Requests</span>
+<span style="color:#00d4b0;">Content-Type:</span> application/json
+<span style="color:#ffd60a;">Retry-After:</span> 30                      <span style="color:var(--text-muted);"># "Wait 30 seconds before knocking again"</span>
+<span style="color:#38bdf8;">X-RateLimit-Limit:</span> 100               <span style="color:var(--text-muted);"># "Your max quota per window"</span>
+<span style="color:#38bdf8;">X-RateLimit-Remaining:</span> 0             <span style="color:var(--text-muted);"># "Zero tokens left right now"</span>
+<span style="color:#38bdf8;">X-RateLimit-Reset:</span> 1700000030        <span style="color:var(--text-muted);"># "Unix timestamp when your quota resets"</span>
+
+{
+  "error": "Too Many Requests",
+  "message": "ChaiPay rate limit exceeded. Please wait 30 seconds."
+}</code></pre>
+        </div>
+      </div>
+
+      <!-- Think About It Box -->
+      <div class="think-pause-box">
+        <div class="think-q">
+          🤔 <strong>Think About It:</strong> Why is returning HTTP 429 with <code>Retry-After</code> so much better than just dropping the connection silently?
+        </div>
+        <div class="think-answer">
+          Predictable client behavior! When mobile apps or partner services see 429 with <code>Retry-After: 30</code>, their network libraries can automatically pause and retry after 30 seconds using exponential backoff. If you drop the connection silently, client apps think the network is dead and immediately hammer you with 10 aggressive retries, making server load 10x worse!
+        </div>
+        <button class="think-reveal-btn">👉 Click to reveal Bouncer Bhaiya's answer</button>
+      </div>
+
+      <!-- Common Confusion Box -->
+      <div class="common-confusion-box">
+        <strong>⚠️ Beginner Mistake:</strong> Returning <code>403 Forbidden</code> instead of <code>429 Too Many Requests</code>.<br />
+        <code>403</code> means <em>"You are not allowed here at all (bad credentials or wrong role)."</em> <code>429</code> means <em>"You ARE allowed here, but you are knocking too fast right now! Try again shortly."</em>
+      </div>
+
+      <!-- Why Does This Matter? Collapsible -->
+      <details class="why-matter-box">
+        <summary>🏢 Why does this matter in real products? (Stripe &amp; GitHub)</summary>
+        <div style="margin-top:0.6rem;">
+          Stripe processes hundreds of billions of dollars annually. If a merchant's developer writes a runaway <code>while(true)</code> loop calling Stripe's payment endpoints, Stripe's rate limiters immediately return 429 to that merchant without affecting any other merchants in the world.
+        </div>
+      </details>
+
+      <!-- Key Takeaways -->
+      <div class="takeaway-card">
+        <div class="takeaway-title">🎯 Mission 1 Key Takeaways</div>
+        <ul>
+          <li>Rate limiting sets an allowed quota (e.g. 100 requests per minute) tracked per IP, user ID, or API key.</li>
+          <li>When clients exceed their quota, the server returns <code>HTTP 429 Too Many Requests</code> instead of crashing.</li>
+          <li>Response headers like <code>Retry-After</code> and <code>X-RateLimit-Reset</code> allow client apps to pause and retry gracefully.</li>
+        </ul>
+      </div>
+
+      <div class="nav-btn-row">
+        <button class="btn btn-secondary" onclick="goToSection(0)">← Previous: The Attack</button>
+        <button class="btn btn-success btn-complete-mission" data-mission="1">✓ Complete Mission 1 (+75 XP)</button>
+        <button class="btn btn-primary" onclick="goToSection(2)">Next: Token Bucket →</button>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
+         MISSION 2 — Token Bucket (10–22 min)
+    ═══════════════════════════════════════════════════════════ -->
+    <section class="lesson-section" id="section-2" aria-labelledby="s2-title" role="tabpanel">
+
+      <div class="mission-card mission-2">
+        <div class="mission-num">02</div>
+        <div>
+          <div class="mission-eyebrow">Mission 2 · 9 to 19 Min</div>
+          <h2 class="mission-title-text" id="s2-title">🪣 The Token Bucket Algorithm: The Gold Standard</h2>
+        </div>
+        <div class="mission-time-chip">125 XP · 🪣 Token Master Badge</div>
+      </div>
+
+      <div class="bouncer-row">
+        <div class="bouncer-figure">
+          <svg viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Bouncer Bhaiya">
+            <path d="M15 110 C 15 80, 30 70, 50 70 C 70 70, 85 80, 85 110 Z" fill="#1c1838" stroke="#38bdf8" stroke-width="3"/>
+            <path d="M42 70 L50 85 L58 70" stroke="#38bdf8" stroke-width="2" fill="#251f47"/>
+            <rect x="46" y="86" width="8" height="12" rx="2" fill="#ffd60a"/>
+            <rect x="42" y="55" width="16" height="18" fill="#e09f67" rx="3"/>
+            <ellipse cx="50" cy="42" rx="22" ry="24" fill="#f0b27a"/>
+            <path d="M26 36 C 26 20, 36 14, 50 14 C 64 14, 74 20, 74 36 C 68 28, 58 26, 50 26 C 42 26, 32 28, 26 36 Z" fill="#0d0a1a"/>
+            <circle cx="27" cy="42" r="5" fill="#e09f67"/>
+            <circle cx="73" cy="42" r="5" fill="#e09f67"/>
+            <path d="M32 38 Q 40 34 47 38 L 47 44 Q 40 48 33 45 Z" fill="#111" stroke="#ffd60a" stroke-width="1.8"/>
+            <path d="M53 38 Q 60 34 68 38 L 67 45 Q 60 48 53 44 Z" fill="#111" stroke="#ffd60a" stroke-width="1.8"/>
+            <line x1="47" y1="39" x2="53" y2="39" stroke="#ffd60a" stroke-width="2"/>
+            <path d="M36 54 C 42 51, 47 53, 50 56 C 53 53, 58 51, 64 54 C 68 56, 67 60, 60 58 C 54 56, 52 58, 50 57 C 48 58, 46 56, 40 58 C 33 60, 32 56, 36 54 Z" fill="#0d0a1a"/>
+            <path d="M44 63 Q 50 66 56 63" stroke="#8c4e28" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="bouncer-bubble">
+          "College canteen ya mandir ka prasad counter yaad hai? Pehle counter se 5 token lo. Har plate samosa ke badle 1 token bouncer ko do. Jab token khatam, samosa band jab tak naya refill na mile!"
+        </div>
+      </div>
+
+      <!-- ELI5 Explanation Mode Toggle -->
+      <div class="eli5-container">
+        <div class="eli5-header">
+          <div class="eli5-title">💡 Explanation Level</div>
+          <div class="eli5-btn-group">
+            <button class="eli5-btn active" data-mode="senior">Senior Dev View</button>
+            <button class="eli5-btn" data-mode="eli5">Explain Like I'm 5 👶</button>
+          </div>
+        </div>
+
+        <!-- Senior Dev Pane -->
+        <div class="eli5-pane active" data-pane="senior">
+          <p>
+            <strong>How Token Bucket Works:</strong> Imagine a bucket that holds a maximum capacity of <code>capacity</code> tokens.
+            Tokens refill constantly at a fixed rate of <code>refillRate</code> tokens per second.
+          </p>
+          <ul style="margin-bottom:0.75rem;">
+            <li>Every incoming request costs <strong>1 token</strong>.</li>
+            <li>If tokens ≥ 1: Deduct 1 token, request is <strong>ALLOWED</strong>.</li>
+            <li>If tokens &lt; 1: Request is <strong>REJECTED (429)</strong>.</li>
+            <li>The bucket never overflows beyond its max <code>capacity</code>.</li>
+          </ul>
+        </div>
+
+        <!-- ELI5 Pane -->
+        <div class="eli5-pane" data-pane="eli5">
+          <p>
+            Imagine you have a small plastic cup that holds <strong>5 shiny coins</strong>.
+            Every second, an uncle drops <strong>1 new coin</strong> into your cup.
+            Every time you want to play an arcade game, you hand over 1 coin.
+            If your cup is empty, you can't play until uncle drops another coin.
+            If you don't play for a long time, the cup gets full and extra coins spill onto the floor (max 5 coins always)!
+          </p>
+        </div>
+      </div>
+
+      <div class="simple-words-box">
+        <strong>In simple words:</strong> Lazy Refill means: instead of running an expensive timer every second, we calculate tokens added only when a request actually arrives: <code>tokens = min(capacity, current + elapsed * rate)</code>.
+      </div>
+
+      <!-- Live Simulator Component -->
+      <div class="card">
+        <div class="card-title">🎛️ Interactive Token Bucket Simulator</div>
+        <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:1rem;">
+          Tweak the capacity and refill rate. Watch the bucket animate as tokens are consumed and refilled!
+        </p>
+
+        <div class="controls-grid">
+          <div class="control-group">
+            <label for="tb-capacity">
+              <span>Bucket Capacity:</span>
+              <span class="control-val" id="tb-capacity-val">10 tokens</span>
+            </label>
+            <input type="range" id="tb-capacity" min="1" max="20" value="10" />
+            <small style="color:var(--text-muted);">Max burst allowed in one go</small>
+          </div>
+          <div class="control-group">
+            <label for="tb-refill">
+              <span>Refill Rate:</span>
+              <span class="control-val" id="tb-refill-val">2 / sec</span>
+            </label>
+            <input type="range" id="tb-refill" min="1" max="10" value="2" />
+            <small style="color:var(--text-muted);">Tokens added every second</small>
+          </div>
+        </div>
+
+        <div class="bucket-visual-area">
+          <div class="bucket-container" aria-label="Bucket visualization">
+            <div class="bucket-rim"></div>
+            <div class="bucket-body">
+              <div class="bucket-water" id="tb-water" style="height: 100%;"></div>
+              <div class="bucket-tokens-text" id="tb-token-display">10 / 10</div>
+            </div>
+          </div>
+
+          <div class="sim-stats">
+            <div class="sim-stat-box">
+              <div class="sim-stat-label">Allowed (200)</div>
+              <div class="sim-stat-val success" id="tb-allowed-count">0</div>
+            </div>
+            <div class="sim-stat-box">
+              <div class="sim-stat-label">Rejected (429)</div>
+              <div class="sim-stat-val danger" id="tb-rejected-count">0</div>
+            </div>
+            <div class="sim-stat-box">
+              <div class="sim-stat-label">Tokens Left</div>
+              <div class="sim-stat-val info" id="tb-tokens-left">10.0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="btn-group" style="margin-top:1rem;">
+          <button class="btn btn-primary" id="btn-tb-send">⚡ Send 1 Request</button>
+          <button class="btn btn-warning" id="btn-tb-burst">💥 Burst of 10 Requests</button>
+          <button class="btn btn-secondary" id="btn-tb-reset">🔄 Reset Bucket</button>
+        </div>
+
+        <div class="log-box" id="tb-log" aria-live="polite" aria-label="Simulator log" style="margin-top:1rem;">
+          <div class="log-entry" style="color:var(--text-muted);">[Ready] Bucket initialized with capacity 10, refill 2/sec. Click a button above!</div>
+        </div>
+      </div>
+
+      <!-- Predict the Output Activity -->
+      <div class="activity-box">
+        <div class="activity-title">🎯 Quick Check: Predict the Output</div>
+        <p style="font-size:0.9rem; margin-bottom:0.75rem;">
+          <strong>Scenario:</strong> Bucket has <strong>Capacity = 5</strong>, <strong>Refill = 1 token/sec</strong>.<br />
+          1. At t = 0s, <strong>8 requests</strong> arrive simultaneously.<br />
+          2. We wait <strong>3 seconds</strong>.<br />
+          3. Then <strong>4 more requests</strong> arrive.<br />
+          <strong>How many total requests are allowed across the entire scenario?</strong>
+        </p>
+
+        <div style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin-bottom:0.75rem;">
+          <input type="number" id="predict-guess" placeholder="Your guess (e.g. 7)" min="0" max="20" style="padding:0.45rem 0.8rem; border-radius:8px; border:2px solid var(--border-strong); background:var(--surface); color:var(--text); font-family:var(--font); width:160px;" />
+          <button class="btn btn-primary" id="btn-predict-run">Run &amp; Verify</button>
+        </div>
+        <div id="predict-result" style="display:none; padding:0.75rem; border-radius:8px; font-size:0.88rem;"></div>
+      </div>
+
+      <!-- Code Walkthrough Section -->
+      <div class="card">
+        <div class="card-title">💻 Production JavaScript Implementation</div>
+        <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:1rem;">
+          Hover over or click each explanation step below to highlight the exact code line that executes it:
+        </p>
+
+        <div class="code-wrap">
+          <button class="copy-btn" aria-label="Copy Token Bucket code">Copy</button>
+          <pre><code><span class="code-line-target" data-line="class">class TokenBucket {</span>
+<span class="code-line-target" data-line="constructor">  constructor(capacity, refillRate, clock = Date.now) {
+    this.capacity   = capacity;    <span style="color:var(--text-muted);">// Max bucket size</span>
+    this.refillRate = refillRate;  <span style="color:var(--text-muted);">// Tokens refilled per second</span></span>
+<span class="code-line-target" data-line="clock">    this.clock      = clock;       <span style="color:var(--text-muted);">// Injectable clock for deterministic tests</span>
+    this.tokens     = capacity;    <span style="color:var(--text-muted);">// Bucket starts 100% full</span>
+    this.lastRefill = clock();     <span style="color:var(--text-muted);">// Last refill timestamp (ms)</span>
+  }</span>
+
+<span class="code-line-target" data-line="allow">  allowRequest(cost = 1) {</span>
+<span class="code-line-target" data-line="elapsed">    const now     = this.clock();
+    const elapsed = (now - this.lastRefill) / 1000; <span style="color:var(--text-muted);">// Seconds since last request</span></span>
+<span class="code-line-target" data-line="refill">    this.tokens   = Math.min(this.capacity, this.tokens + elapsed * this.refillRate);</span>
+<span class="code-line-target" data-line="timestamp">    this.lastRefill = now;                          <span style="color:var(--text-muted);">// Advance anchor timestamp</span></span>
+
+<span class="code-line-target" data-line="check">    if (this.tokens &gt;= cost) {</span>
+<span class="code-line-target" data-line="deduct">      this.tokens -= cost;
+      return true;  <span style="color:var(--text-muted);">// 200 OK — Allowed</span>
+    }
+    return false;   <span style="color:var(--text-muted);">// 429 Too Many Requests — Throttled</span></span>
+  }
+}</code></pre>
+        </div>
+
+        <!-- Interactive Walkthrough Steps (7 Steps) -->
+        <div class="walkthrough-steps">
+          <div class="walkthrough-step" data-target-line="constructor">
+            <span class="step-num">1</span>
+            <div><strong>State Setup:</strong> Sets max burst <code>capacity</code> and steady <code>refillRate</code>. Bucket starts 100% full so new users don't encounter immediate cold-start 429 errors.</div>
+          </div>
+          <div class="walkthrough-step" data-target-line="clock">
+            <span class="step-num">2</span>
+            <div><strong>Injectable Clock:</strong> Takes an optional clock function (defaults to <code>Date.now</code>). This dependency injection allows test suites and simulators to freeze time without wall-clock sleeps.</div>
+          </div>
+          <div class="walkthrough-step" data-target-line="elapsed">
+            <span class="step-num">3</span>
+            <div><strong>Elapsed Calculation:</strong> Calculates exact seconds elapsed since the last request was checked: <code>(now - lastRefill) / 1000</code>.</div>
+          </div>
+          <div class="walkthrough-step" data-target-line="refill">
+            <span class="step-num">4</span>
+            <div><strong>Lazy Refill &amp; Cap:</strong> Multiplies elapsed seconds by refill rate. <code>Math.min(capacity, ...)</code> strictly guarantees the bucket never exceeds its burst ceiling.</div>
+          </div>
+          <div class="walkthrough-step" data-target-line="timestamp">
+            <span class="step-num">5</span>
+            <div><strong>Anchor Timestamp Update:</strong> Updates <code>this.lastRefill = now</code> so subsequent requests only measure the next delta.</div>
+          </div>
+          <div class="walkthrough-step" data-target-line="check">
+            <span class="step-num">6</span>
+            <div><strong>Quota Verification:</strong> Checks if remaining tokens are sufficient for this request's cost (default <code>cost = 1</code>).</div>
+          </div>
+          <div class="walkthrough-step" data-target-line="deduct">
+            <span class="step-num">7</span>
+            <div><strong>Deduct &amp; Decision:</strong> If allowed, deducts <code>cost</code> tokens and returns <code>true</code>. Otherwise returns <code>false</code> (HTTP 429).</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Think About It Box -->
+      <div class="think-pause-box">
+        <div class="think-q">
+          🤔 <strong>Think About It:</strong> Why is lazy refill so much lighter on server memory than running a background <code>setInterval()</code> timer?
+        </div>
+        <div class="think-answer">
+          Imagine 500,000 active users logged into ChaiPay. If you used <code>setInterval</code> to add tokens every second, you would need 500,000 background timers running inside Node.js! That would melt the event loop. With lazy refill, you use ZERO timers. The math only runs when a user actually knocks on the API.
+        </div>
+        <button class="think-reveal-btn">👉 Click to reveal Bouncer Bhaiya's answer</button>
+      </div>
+
+      <!-- Common Confusion Box -->
+      <div class="common-confusion-box">
+        <strong>⚠️ Beginner Mistake:</strong> Forgetting <code>Math.min(this.capacity, ...)</code> in lazy refill.<br />
+        With a refill rate of 2 tokens/sec, 24 hours idle (86,400 seconds) would give 172,800 tokens! Without <code>Math.min</code>, an idle user could bank all 172,800 tokens and fire a massive 172,800-request DDoS burst that completely overwhelms your server.
+      </div>
+
+      <!-- Why Does This Matter? Collapsible -->
+      <details class="why-matter-box">
+        <summary>🏢 Why does this matter in real products? (AWS API Gateway)</summary>
+        <div style="margin-top:0.6rem;">
+          Amazon Web Services (AWS) uses the Token Bucket algorithm for API Gateway throttling. They let you set both a steady-state rate (refill rate) and a burst capacity (bucket size), ensuring mobile apps can quickly load initial data on startup without getting throttled.
+        </div>
+      </details>
+
+      <!-- Key Takeaways -->
+      <div class="takeaway-card">
+        <div class="takeaway-title">🎯 Mission 2 Key Takeaways</div>
+        <ul>
+          <li>Token Bucket naturally handles bursts up to its capacity, providing a smooth user experience.</li>
+          <li>Lazy refill computes token growth on demand, requiring zero background timers or CPU overhead.</li>
+          <li>It uses constant O(1) memory per user — only two numbers (tokens and timestamp) need to be stored.</li>
+        </ul>
+      </div>
+
+      <div class="nav-btn-row">
+        <button class="btn btn-secondary" onclick="goToSection(1)">← Previous: Rate Limiting 101</button>
+        <button class="btn btn-success btn-complete-mission" data-mission="2">✓ Complete Mission 2 (+125 XP)</button>
+        <button class="btn btn-primary" onclick="goToSection(3)">Next: Sliding Window →</button>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
+         MISSION 3 — Sliding Window (22–34 min)
+    ═══════════════════════════════════════════════════════════ -->
+    <section class="lesson-section" id="section-3" aria-labelledby="s3-title" role="tabpanel">
+
+      <div class="mission-card mission-3">
+        <div class="mission-num">03</div>
+        <div>
+          <div class="mission-eyebrow">Mission 3 · 19 to 29 Min</div>
+          <h2 class="mission-title-text" id="s3-title">🪟 Fixed Window vs Sliding Window: The Boundary Burst Problem</h2>
+        </div>
+        <div class="mission-time-chip">150 XP · 🪟 Window Wizard Badge</div>
+      </div>
+
+      <div class="bouncer-row">
+        <div class="bouncer-figure">
+          <svg viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Bouncer Bhaiya">
+            <path d="M15 110 C 15 80, 30 70, 50 70 C 70 70, 85 80, 85 110 Z" fill="#1c1838" stroke="#ff4f8b" stroke-width="3"/>
+            <path d="M42 70 L50 85 L58 70" stroke="#ff4f8b" stroke-width="2" fill="#251f47"/>
+            <rect x="46" y="86" width="8" height="12" rx="2" fill="#ffd60a"/>
+            <rect x="42" y="55" width="16" height="18" fill="#e09f67" rx="3"/>
+            <ellipse cx="50" cy="42" rx="22" ry="24" fill="#f0b27a"/>
+            <path d="M26 36 C 26 20, 36 14, 50 14 C 64 14, 74 20, 74 36 C 68 28, 58 26, 50 26 C 42 26, 32 28, 26 36 Z" fill="#0d0a1a"/>
+            <circle cx="27" cy="42" r="5" fill="#e09f67"/>
+            <circle cx="73" cy="42" r="5" fill="#e09f67"/>
+            <path d="M32 38 Q 40 34 47 38 L 47 44 Q 40 48 33 45 Z" fill="#111" stroke="#ffd60a" stroke-width="1.8"/>
+            <path d="M53 38 Q 60 34 68 38 L 67 45 Q 60 48 53 44 Z" fill="#111" stroke="#ffd60a" stroke-width="1.8"/>
+            <line x1="47" y1="39" x2="53" y2="39" stroke="#ffd60a" stroke-width="2"/>
+            <path d="M36 54 C 42 51, 47 53, 50 56 C 53 53, 58 51, 64 54 C 68 56, 67 60, 60 58 C 54 56, 52 58, 50 57 C 48 58, 46 56, 40 58 C 33 60, 32 56, 36 54 Z" fill="#0d0a1a"/>
+            <path d="M44 63 Q 50 66 56 63" stroke="#8c4e28" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="bouncer-bubble">
+          "Fixed window mein ek fatal loop-hole hai! Agar limit 5 req/sec hai, aur koi 0.9 second pe 5 bhejta hai aur 1.1 second pe 5 aur, toh 0.2 second ke andar 10 requests server par ghus gayin! Isko bolte hain Boundary Burst!"
+        </div>
+      </div>
+
+      <!-- ELI5 Explanation Mode Toggle -->
+      <div class="eli5-container">
+        <div class="eli5-header">
+          <div class="eli5-title">💡 Explanation Level</div>
+          <div class="eli5-btn-group">
+            <button class="eli5-btn active" data-mode="senior">Senior Dev View</button>
+            <button class="eli5-btn" data-mode="eli5">Explain Like I'm 5 👶</button>
+          </div>
+        </div>
+
+        <div class="eli5-pane active" data-pane="senior">
+          <p>
+            <strong>The Fixed Window Vulnerability:</strong> A Fixed Window resets its counter at rigid clock intervals (e.g., <code>[10:00:00, 10:01:00)</code>).
+            If an attacker fires the full limit right before the window closes, and immediately fires another full limit right after the new window opens, <strong>2x the traffic penetrates</strong> in a tiny fraction of a second.
+          </p>
+        </div>
+
+        <div class="eli5-pane" data-pane="eli5">
+          <p>
+            Mom says: <em>"You can have at most 2 chocolates between 1:00 PM and 2:00 PM, and 2 chocolates between 2:00 PM and 3:00 PM."</em>
+            A clever kid eats 2 chocolates at <strong>1:59 PM</strong> and 2 chocolates at <strong>2:01 PM</strong>!
+            The kid ate <strong>4 chocolates in just 2 minutes</strong>, but technically followed the rule! Sliding window fixes this loophole.
+          </p>
+        </div>
+      </div>
+
+      <div class="simple-words-box">
+        <strong>In simple words:</strong> A Sliding Window slides smoothly across time like a moving 60-second camera lens, so it never has artificial clock boundary resets.
+      </div>
+
+      <!-- Side-by-Side Comparison Demo -->
+      <div class="card">
+        <div class="card-title">🔬 Interactive Comparison: Fixed Window vs Sliding Window Log vs Counter</div>
+        <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:1rem;">
+          Limit = <strong>5 req / second</strong>. Click <strong>"Simulate Boundary Burst"</strong> to fire 5 requests at t = 900ms and 5 requests at t = 1100ms. See who stops the attack!
+        </p>
+
+        <div class="timeline-comparison-grid">
+          <!-- Fixed Window -->
+          <div class="timeline-card">
+            <h4>Fixed Window</h4>
+            <div class="tl-badge danger">Vulnerable to Burst</div>
+            <p style="font-size:0.8rem; color:var(--text-muted);">Resets counter at boundary t = 1000ms.</p>
+            <div class="sim-stat-val" id="fw-count" style="color:var(--danger); font-size:1.8rem; margin:0.5rem 0;">0 / 5</div>
+            <div class="server-status" id="fw-status">Ready</div>
+          </div>
+
+          <!-- Sliding Window Log -->
+          <div class="timeline-card">
+            <h4>Sliding Window Log</h4>
+            <div class="tl-badge success">100% Mathematically Exact</div>
+            <p style="font-size:0.8rem; color:var(--text-muted);">Stores timestamp array in memory.</p>
+            <div class="sim-stat-val" id="swl-count" style="color:var(--success); font-size:1.8rem; margin:0.5rem 0;">0 / 5</div>
+            <div class="server-status" id="swl-status">Ready</div>
+          </div>
+
+          <!-- Sliding Window Counter -->
+          <div class="timeline-card">
+            <h4>Sliding Window Counter</h4>
+            <div class="tl-badge info">Production O(1) Memory</div>
+            <p style="font-size:0.8rem; color:var(--text-muted);">Weighted estimate of previous window.</p>
+            <div class="sim-stat-val" id="swc-count" style="color:var(--info); font-size:1.8rem; margin:0.5rem 0;">0 / 5</div>
+            <div class="server-status" id="swc-status">Ready</div>
+          </div>
+        </div>
+
+        <div class="btn-group" style="margin-top:1.25rem;">
+          <button class="btn btn-warning" id="btn-fw-demo">💥 Simulate Boundary Burst (t = 900ms &amp; 1100ms)</button>
+          <button class="btn btn-secondary" id="btn-sw-reset">🔄 Reset Timeline</button>
+        </div>
+
+        <div class="log-box" id="sw-demo-log" aria-live="polite" style="margin-top:1rem;">
+          <div class="log-entry" style="color:var(--text-muted);">Click "Simulate Boundary Burst" to see how Fixed Window leaks 10 requests while Sliding Window blocks them.</div>
+        </div>
+      </div>
+
+      <!-- Worked Math Example Box for Sliding Window Counter -->
+      <div class="worked-example-box">
+        <h4>🧮 Worked Math Example: How Sliding Window Counter Estimates Traffic</h4>
+        <p style="font-size:0.88rem; margin-bottom:0.75rem;">
+          Let's trace the exact math with real numbers so there is zero mystery:
+        </p>
+
+        <div class="math-step">
+          <strong>Step 1: Setup the Scenario</strong><br />
+          Quota Limit = <strong>10 requests per minute</strong> (window size = 60 seconds).<br />
+          In the <em>previous minute</em> (10:00 to 10:01), the user sent <strong>8 requests</strong>.<br />
+          Right now it is <strong>10:01:15</strong> (15 seconds into the current minute). The user has sent <strong>2 requests</strong> so far.
+        </div>
+
+        <div class="math-step">
+          <strong>Step 2: Calculate Current Time Offset</strong><br />
+          Current minute elapsed: <code>15s / 60s = 0.25 (25%)</code>.<br />
+          Remaining weight of previous minute: <code>1 - 0.25 = 0.75 (75%)</code>.
+        </div>
+
+        <div class="math-step">
+          <strong>Step 3: Calculate Weighted Estimate</strong><br />
+          <code>Estimate = (Previous Window Requests × Weight) + Current Window Requests</code><br />
+          <code>Estimate = (8 × 0.75) + 2 = 6.0 + 2 = 8.0 requests</code>.
+        </div>
+
+        <div class="math-step">
+          <strong>Step 4: Decision</strong><br />
+          Can request #3 pass? <code>8.0 + 1 = 9.0 ≤ 10</code>. <strong>ALLOWED! ✅</strong><br />
+          If the estimate had reached <code>10.0</code>, request would be <strong>REJECTED (429)! ❌</strong>
+        </div>
+
+        <p style="font-size:0.85rem; color:var(--text-muted); margin-top:0.5rem;">
+          <strong>Why is this an approximation?</strong> It assumes requests in the previous minute were evenly spread out over the 60 seconds. In rare cases where requests clustered at the very end of the previous window, it might allow or drop slightly more requests than the exact limit (this is the approximation trade-off). In practice, Cloudflare's engineering blog reported that roughly <strong>0.003%</strong> of requests were wrongly allowed or limited, while saving over <strong>99% of memory</strong>!
+        </p>
+      </div>
+
+      <!-- Code for Sliding Window Log & Counter -->
+      <div class="card">
+        <div class="card-title">💻 Pure JavaScript: Sliding Window Log &amp; Counter</div>
+
+        <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:0.5rem;">
+          <strong>Implementation 1: Sliding Window Log (Exact, O(N) memory)</strong>
+        </p>
+        <div class="code-wrap">
+          <button class="copy-btn" aria-label="Copy Sliding Window Log code">Copy</button>
+          <pre><code>class SlidingWindowLog {
+  constructor(limit, windowMs, clock = Date.now) {
+    this.limit    = limit;
+    this.windowMs = windowMs;
+    this.clock    = clock;
+    this.logs     = []; <span style="color:var(--text-muted);">// Array of timestamps</span>
+  }
+
+  allowRequest() {
+    const now    = this.clock();
+    const cutoff = now - this.windowMs;
+
+    <span style="color:var(--text-muted);">// Drop timestamps that fell outside the sliding window</span>
+    while (this.logs.length &gt; 0 &amp;&amp; this.logs[0] &lt;= cutoff) {
+      this.logs.shift();
+    }
+
+    if (this.logs.length &lt; this.limit) {
+      this.logs.push(now);
+      return true;  <span style="color:var(--text-muted);">// Allowed</span>
+    }
+    return false;   <span style="color:var(--text-muted);">// 429 Too Many Requests</span>
+  }
+}</code></pre>
+        </div>
+
+        <p style="font-size:0.88rem; color:var(--text-muted); margin:1.5rem 0 0.5rem;">
+          <strong>Implementation 2: Sliding Window Counter (Approximation, O(1) memory)</strong>
+        </p>
+        <div class="code-wrap">
+          <button class="copy-btn" aria-label="Copy Sliding Window Counter code">Copy</button>
+          <pre><code>class SlidingWindowCounter {
+<span class="code-line-target" data-line="swc-constructor">  constructor(limit, windowMs, clock = Date.now) {
+    this.limit         = limit;
+    this.windowMs      = windowMs;
+    this.clock         = clock;
+    this.prevCount     = 0;
+    this.currCount     = 0;
+    this.currentWindow = Math.floor(clock() / windowMs);
+  }</span>
+
+  allowRequest() {
+<span class="code-line-target" data-line="swc-window">    const now       = this.clock();
+    const curWindow = Math.floor(now / this.windowMs);</span>
+
+<span class="code-line-target" data-line="swc-rollover">    <span style="color:var(--text-muted);">// Check if time moved into a new window</span>
+    if (curWindow &gt; this.currentWindow) {
+      this.prevCount     = (curWindow - this.currentWindow === 1) ? this.currCount : 0;
+      this.currCount     = 0;
+      this.currentWindow = curWindow;
+    }</span>
+
+<span class="code-line-target" data-line="swc-weight">    <span style="color:var(--text-muted);">// Calculate weight of previous window</span>
+    const timeInWindow = now % this.windowMs;
+    const weight       = 1 - (timeInWindow / this.windowMs);</span>
+<span class="code-line-target" data-line="swc-estimate">    const estimate     = this.prevCount * weight + this.currCount;</span>
+
+<span class="code-line-target" data-line="swc-check">    if (estimate + 1 &lt;= this.limit) {</span>
+<span class="code-line-target" data-line="swc-decision">      this.currCount++;
+      return true;  <span style="color:var(--text-muted);">// Allowed</span>
+    }
+    return false;   <span style="color:var(--text-muted);">// 429 Too Many Requests</span></span>
+  }
+}</code></pre>
+        </div>
+
+        <!-- Interactive Walkthrough Steps for Sliding Window Counter (7 Steps) -->
+        <div class="walkthrough-steps">
+          <div class="walkthrough-step" data-target-line="swc-constructor">
+            <span class="step-num">1</span>
+            <div><strong>State Setup:</strong> Stores <code>limit</code> and <code>windowMs</code>. Tracks only two counters (<code>prevCount</code> and <code>currCount</code>), guaranteeing strictly O(1) constant memory.</div>
+          </div>
+          <div class="walkthrough-step" data-target-line="swc-window">
+            <span class="step-num">2</span>
+            <div><strong>Epoch Window Alignment:</strong> Computes current discrete window bucket ID <code>Math.floor(now / windowMs)</code>.</div>
+          </div>
+          <div class="walkthrough-step" data-target-line="swc-rollover">
+            <span class="step-num">3</span>
+            <div><strong>Window Slide / Rollover:</strong> If the clock moved to the next window, the current count slides to become <code>prevCount</code>. If 2+ windows skipped, previous resets to 0.</div>
+          </div>
+          <div class="walkthrough-step" data-target-line="swc-weight">
+            <span class="step-num">4</span>
+            <div><strong>Overlap Weight Calculation:</strong> Measures progress inside the current window (e.g. 15s in a 60s window = 25%). Previous window weight is <code>1 - 0.25 = 0.75</code>.</div>
+          </div>
+          <div class="walkthrough-step" data-target-line="swc-estimate">
+            <span class="step-num">5</span>
+            <div><strong>Weighted Linear Estimation:</strong> Computes smooth rolling estimate: <code>prevCount * weight + currCount</code>.</div>
+          </div>
+          <div class="walkthrough-step" data-target-line="swc-check">
+            <span class="step-num">6</span>
+            <div><strong>Boundary Check:</strong> Tests whether adding this request fits within limit: <code>estimate + 1 &lt;= this.limit</code>.</div>
+          </div>
+          <div class="walkthrough-step" data-target-line="swc-decision">
+            <span class="step-num">7</span>
+            <div><strong>Update &amp; Response:</strong> If permitted, increments <code>this.currCount++</code> and returns <code>true</code>. Otherwise returns <code>false</code> (HTTP 429).</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Think About It Box -->
+      <div class="think-pause-box">
+        <div class="think-q">
+          🤔 <strong>Think About It:</strong> If Sliding Window Log is 100% mathematically exact, why don't massive platforms with 500 million active users use it for all requests?
+        </div>
+        <div class="think-answer">
+          Memory disaster! If each user sends 100 requests per minute, storing 100 64-bit integer timestamps for 500 million users would require <strong>400 Gigabytes of fast RAM</strong> in Redis just for rate limiting metadata! Sliding Window Counter achieves near-perfect accuracy using only two simple integers (prevCount and currCount), fitting in a tiny fraction of that memory.
+        </div>
+        <button class="think-reveal-btn">👉 Click to reveal Bouncer Bhaiya's answer</button>
+      </div>
+
+      <!-- Common Confusion Box -->
+      <div class="common-confusion-box">
+        <strong>⚠️ Beginner Mistake:</strong> Thinking Sliding Window Counter is broken because the estimate is a float with decimals (like <code>4.7</code>).<br />
+        Decimals are completely normal and expected! The weighted average interpolates between the previous and current window. Checking <code>estimate + 1 &lt;= limit</code> handles decimal estimates perfectly.
+      </div>
+
+      <!-- Why Does This Matter? Collapsible -->
+      <details class="why-matter-box">
+        <summary>🏢 Why does this matter in real products? (Cloudflare Edge)</summary>
+        <div style="margin-top:0.6rem;">
+          Cloudflare handles over 55 million HTTP requests every single second across global edge servers. They use the Sliding Window Counter algorithm because it evaluates in microseconds with constant O(1) memory, stopping massive multi-gigabit DDoS attacks without memory spikes.
+        </div>
+      </details>
+
+      <!-- Key Takeaways -->
+      <div class="takeaway-card">
+        <div class="takeaway-title">🎯 Mission 3 Key Takeaways</div>
+        <ul>
+          <li>Fixed Window algorithms suffer from boundary bursts, allowing up to 2x the limit across window boundaries.</li>
+          <li>Sliding Window Log achieves 100% precision by storing timestamps, but consumes O(N) memory which explodes under scale.</li>
+          <li>Sliding Window Counter combines the O(1) low-memory footprint of Fixed Window with the smooth boundary protection of Sliding Window.</li>
+        </ul>
+      </div>
+
+      <div class="nav-btn-row">
+        <button class="btn btn-secondary" onclick="goToSection(2)">← Previous: Token Bucket</button>
+        <button class="btn btn-success btn-complete-mission" data-mission="3">✓ Complete Mission 3 (+150 XP)</button>
+        <button class="btn btn-primary" onclick="goToSection(4)">Next: Comparison →</button>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
+         MISSION 4 — Comparison & Battle Arena (34–38 min)
+    ═══════════════════════════════════════════════════════════ -->
+    <section class="lesson-section" id="section-4" aria-labelledby="s4-title" role="tabpanel">
+
+      <div class="mission-card mission-4">
+        <div class="mission-num">04</div>
+        <div>
+          <div class="mission-eyebrow">Mission 4 · 29 to 34 Min</div>
+          <h2 class="mission-title-text" id="s4-title">📊 Algorithm Showdown: Which One Should You Choose?</h2>
+        </div>
+        <div class="mission-time-chip">75 XP · ⚖️ Architect Badge</div>
+      </div>
+
+      <div class="bouncer-row">
+        <div class="bouncer-figure">
+          <svg viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Bouncer Bhaiya">
+            <path d="M15 110 C 15 80, 30 70, 50 70 C 70 70, 85 80, 85 110 Z" fill="#1c1838" stroke="#ffd60a" stroke-width="3"/>
+            <path d="M42 70 L50 85 L58 70" stroke="#ffd60a" stroke-width="2" fill="#251f47"/>
+            <rect x="46" y="86" width="8" height="12" rx="2" fill="#ffd60a"/>
+            <rect x="42" y="55" width="16" height="18" fill="#e09f67" rx="3"/>
+            <ellipse cx="50" cy="42" rx="22" ry="24" fill="#f0b27a"/>
+            <path d="M26 36 C 26 20, 36 14, 50 14 C 64 14, 74 20, 74 36 C 68 28, 58 26, 50 26 C 42 26, 32 28, 26 36 Z" fill="#0d0a1a"/>
+            <circle cx="27" cy="42" r="5" fill="#e09f67"/>
+            <circle cx="73" cy="42" r="5" fill="#e09f67"/>
+            <path d="M32 38 Q 40 34 47 38 L 47 44 Q 40 48 33 45 Z" fill="#111" stroke="#ffd60a" stroke-width="1.8"/>
+            <path d="M53 38 Q 60 34 68 38 L 67 45 Q 60 48 53 44 Z" fill="#111" stroke="#ffd60a" stroke-width="1.8"/>
+            <line x1="47" y1="39" x2="53" y2="39" stroke="#ffd60a" stroke-width="2"/>
+            <path d="M36 54 C 42 51, 47 53, 50 56 C 53 53, 58 51, 64 54 C 68 56, 67 60, 60 58 C 54 56, 52 58, 50 57 C 48 58, 46 56, 40 58 C 33 60, 32 56, 36 54 Z" fill="#0d0a1a"/>
+            <path d="M44 63 Q 50 66 56 63" stroke="#8c4e28" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="bouncer-bubble">
+          "Software architecture mein koi ek magic formula nahi hota! Har algorithm ka trade-off hota hai. Memory bachaoge ya exact accuracy chahiye? Aao arena mein inko ladaate hain!"
+        </div>
+      </div>
+
+      <div class="simple-words-box">
+        <strong>In simple words:</strong> O(1) Memory means storing just 2 fixed numbers per user forever; O(N) Memory means storing an array of every timestamp, which balloons into gigabytes under heavy traffic.
+      </div>
+
+      <!-- Mini-Game: Rate Limiter Battle Arena -->
+      <div class="card battle-arena-card" id="battle-arena">
+        <div class="card-title">🥊 Bonus (Optional): Rate Limiter Battle Arena</div>
+        <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:1rem;">
+          Choose a real-world traffic pattern and watch how all 4 algorithms react simultaneously against the exact same incoming traffic!
+        </p>
+
+        <!-- Battle Controls & Sliders -->
+        <div class="battle-controls">
+          <div class="control-group">
+            <label for="battle-limit">
+              <span>Traffic Quota Limit:</span>
+              <span class="control-val" id="battle-limit-val">10 req</span>
+            </label>
+            <input type="range" id="battle-limit" min="5" max="25" value="10" />
+            <small style="color:var(--text-muted);">Max requests per window</small>
+          </div>
+          <div class="control-group">
+            <label for="battle-window">
+              <span>Window Duration:</span>
+              <span class="control-val" id="battle-window-val">2s</span>
+            </label>
+            <input type="range" id="battle-window" min="1000" max="5000" step="500" value="2000" />
+            <small style="color:var(--text-muted);">Rolling window size in seconds</small>
+          </div>
+        </div>
+
+        <div style="font-weight:700; font-size:0.9rem; margin-bottom:0.4rem;">Select Traffic Attack Pattern:</div>
+        <div class="traffic-btn-group">
+          <button class="btn-traffic" id="btn-battle-steady" data-pattern="steady">🟢 Steady Traffic</button>
+          <button class="btn-traffic" id="btn-battle-burst" data-pattern="burst">🟡 Sudden Burst (15 req)</button>
+          <button class="btn-traffic active" id="btn-battle-boundary" data-pattern="boundary">🔴 Boundary Attack (20 req)</button>
+        </div>
+
+        <!-- 4 Competitor Cards -->
+        <div class="battle-grid">
+          <!-- Token Bucket -->
+          <div class="battle-card" id="battle-card-tb">
+            <div class="battle-algo-title">
+              <span>🪣 Token Bucket</span>
+              <span class="badge badge-success">O(1) RAM</span>
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:0.4rem;">
+              Params: <code id="battle-tb-params">capacity = 10, refill = 5.0/s</code>
+            </div>
+            <div class="battle-stat-row">
+              <span>Allowed: <strong id="battle-tb-allowed">0</strong></span>
+              <span>Rejected: <strong id="battle-tb-rejected">0</strong></span>
+            </div>
+            <div class="battle-progress-bar">
+              <div class="battle-bar-allowed" id="battle-tb-bar-allow" style="width:50%;"></div>
+              <div class="battle-bar-rejected" id="battle-tb-bar-reject" style="width:50%;"></div>
+            </div>
+            <div class="battle-verdict-tag neutral" id="battle-tb-tag">BURST TOLERANT 🪣</div>
+          </div>
+
+          <!-- Fixed Window -->
+          <div class="battle-card leaked" id="battle-card-fw">
+            <div class="battle-algo-title">
+              <span>🪟 Fixed Window</span>
+              <span class="badge badge-warning">O(1) RAM</span>
+            </div>
+            <div class="battle-stat-row">
+              <span>Allowed: <strong id="battle-fw-allowed">0</strong></span>
+              <span>Rejected: <strong id="battle-fw-rejected">0</strong></span>
+            </div>
+            <div class="battle-progress-bar">
+              <div class="battle-bar-allowed" id="battle-fw-bar-allow" style="width:100%;"></div>
+              <div class="battle-bar-rejected" id="battle-fw-bar-reject" style="width:0%;"></div>
+            </div>
+            <div class="battle-verdict-tag warning" id="battle-fw-tag">LEAKED 2x TRAFFIC! ❌</div>
+          </div>
+
+          <!-- Sliding Window Log -->
+          <div class="battle-card winner" id="battle-card-swl">
+            <div class="battle-algo-title">
+              <span>📜 Sliding Log</span>
+              <span class="badge badge-danger">O(N) RAM</span>
+            </div>
+            <div class="battle-stat-row">
+              <span>Allowed: <strong id="battle-swl-allowed">0</strong></span>
+              <span>Rejected: <strong id="battle-swl-rejected">0</strong></span>
+            </div>
+            <div class="battle-progress-bar">
+              <div class="battle-bar-allowed" id="battle-swl-bar-allow" style="width:50%;"></div>
+              <div class="battle-bar-rejected" id="battle-swl-bar-reject" style="width:50%;"></div>
+            </div>
+            <div class="battle-verdict-tag safe" id="battle-swl-tag">100% STRICT SHIELD 🛡️</div>
+          </div>
+
+          <!-- Sliding Window Counter -->
+          <div class="battle-card winner" id="battle-card-swc">
+            <div class="battle-algo-title">
+              <span>⏱️ Sliding Counter</span>
+              <span class="badge badge-success">O(1) RAM</span>
+            </div>
+            <div class="battle-stat-row">
+              <span>Allowed: <strong id="battle-swc-allowed">0</strong></span>
+              <span>Rejected: <strong id="battle-swc-rejected">0</strong></span>
+            </div>
+            <div class="battle-progress-bar">
+              <div class="battle-bar-allowed" id="battle-swc-bar-allow" style="width:50%;"></div>
+              <div class="battle-bar-rejected" id="battle-swc-bar-reject" style="width:50%;"></div>
+            </div>
+            <div class="battle-verdict-tag safe" id="battle-swc-tag">OPTIMAL O(1) BALANCE ⚖️</div>
+          </div>
+        </div>
+
+        <div class="battle-commentary" id="battle-commentary">
+          🔴 <strong>Boundary Attack (Tatkal Surges):</strong> Look closely! <strong>Fixed Window leaked requests (2x the limit!)</strong> because the window edge ticked over. Meanwhile, <strong>Sliding Window Log strictly blocked it</strong> and <strong>Sliding Window Counter smoothed it</strong> with constant O(1) memory!
+        </div>
+      </div>
+
+      <!-- Comparison Table -->
+      <div class="card" style="margin-top:2rem;">
+        <div class="card-title">⚖️ Comprehensive Algorithm Comparison</div>
+        <div style="overflow-x:auto;">
+          <table class="comparison-table">
+            <thead>
+              <tr>
+                <th>Algorithm</th>
+                <th>Memory</th>
+                <th>Time Complexity</th>
+                <th>Burst Handling</th>
+                <th>Accuracy</th>
+                <th>Best For</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Token Bucket</strong></td>
+                <td><span class="badge badge-success">O(1)</span></td>
+                <td><span class="badge badge-success">O(1)</span></td>
+                <td>Allows bursts up to capacity</td>
+                <td>High</td>
+                <td>General web APIs, AWS Gateway, Stripe</td>
+              </tr>
+              <tr>
+                <td><strong>Fixed Window</strong></td>
+                <td><span class="badge badge-success">O(1)</span></td>
+                <td><span class="badge badge-success">O(1)</span></td>
+                <td><span class="badge badge-danger">Leaking 2x</span> boundary burst</td>
+                <td>Low at edges</td>
+                <td>Simple daily quotas resetting at midnight</td>
+              </tr>
+              <tr>
+                <td><strong>Sliding Window Log</strong></td>
+                <td><span class="badge badge-danger">O(N)</span></td>
+                <td><span class="badge badge-warning">O(1) amortized (array) / O(log N) (Redis ZSET)</span></td>
+                <td>Strictly prevents bursts</td>
+                <td>100% Exact</td>
+                <td>Financial transactions, low-volume credit APIs</td>
+              </tr>
+              <tr>
+                <td><strong>Sliding Window Counter</strong></td>
+                <td><span class="badge badge-success">O(1)</span></td>
+                <td><span class="badge badge-success">O(1)</span></td>
+                <td>Smooths bursts cleanly</td>
+                <td>~99.95% (Approx)</td>
+                <td>High-scale CDNs, Cloudflare, massive public APIs</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Interactive Scenario Picker -->
+      <div class="card">
+        <div class="card-title">🧩 Architecture Decision: Which Would You Choose?</div>
+        <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:1rem;">
+          Click each ChaiPay production scenario to reveal Bouncer Bhaiya's architectural recommendation:
+        </p>
+
+        <div class="scenario-picker" id="scenario-picker">
+          <!-- Scenario 0 -->
+          <div class="scenario-card" data-scenario="0">
+            <h4>📱 Scenario 1: ChaiPay User Mobile App API</h4>
+            <p style="font-size:0.85rem; color:var(--text-muted);">
+              When users open the app, it fires 4 simultaneous requests (balance, recent transactions, profile, banners). Normal usage is 1 request every 5 seconds.
+            </p>
+            <div class="scenario-ans" id="scenario-ans-0" style="display:none; margin-top:0.75rem; font-size:0.88rem; padding:0.6rem; border-radius:6px; background:var(--surface2);">
+              ✅ <strong>Recommendation: Token Bucket (Capacity 10, Refill 1/s)</strong><br />
+              Allows the initial 4-request burst without frustrating the user, while strictly capping continuous hammering.
+            </div>
+          </div>
+
+          <!-- Scenario 1 -->
+          <div class="scenario-card" data-scenario="1">
+            <h4>🏦 Scenario 2: UPI Money Transfer Dispatch</h4>
+            <p style="font-size:0.85rem; color:var(--text-muted);">
+              High-security endpoint interacting directly with the Reserve Bank / NPCI gateway. Zero boundary bursts can be tolerated. Moderate volume.
+            </p>
+            <div class="scenario-ans" id="scenario-ans-1" style="display:none; margin-top:0.75rem; font-size:0.88rem; padding:0.6rem; border-radius:6px; background:var(--surface2);">
+              ✅ <strong>Recommendation: Sliding Window Log</strong><br />
+              Requires 100% mathematical precision. Volume is low enough that storing timestamps in Redis will not blow up memory.
+            </div>
+          </div>
+
+          <!-- Scenario 2 -->
+          <div class="scenario-card" data-scenario="2">
+            <h4>🌐 Scenario 3: ChaiPay QR Code Scanner CDN</h4>
+            <p style="font-size:0.85rem; color:var(--text-muted);">
+              100 million merchants scanning QR codes simultaneously across India. 100,000 req/sec total. Redis memory cost is the primary bottleneck.
+            </p>
+            <div class="scenario-ans" id="scenario-ans-2" style="display:none; margin-top:0.75rem; font-size:0.88rem; padding:0.6rem; border-radius:6px; background:var(--surface2);">
+              ✅ <strong>Recommendation: Sliding Window Counter</strong><br />
+              Constant O(1) memory per merchant key. Extremely low CPU overhead and no memory explosion.
+            </div>
+          </div>
+
+          <!-- Scenario 3 -->
+          <div class="scenario-card" data-scenario="3">
+            <h4>🎁 Scenario 4: ChaiPay Daily Cashback Coupon</h4>
+            <p style="font-size:0.85rem; color:var(--text-muted);">
+              Each user can claim 1 scratch card per calendar day, resetting exactly at 00:00:00 IST midnight.
+            </p>
+            <div class="scenario-ans" id="scenario-ans-3" style="display:none; margin-top:0.75rem; font-size:0.88rem; padding:0.6rem; border-radius:6px; background:var(--surface2);">
+              ✅ <strong>Recommendation: Fixed Window with TTL</strong><br />
+              Boundary burst is irrelevant here. Key <code>user:123:2026-11-06</code> with <code>INCR</code> and TTL expiring at midnight is simple and foolproof.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Common Confusion Box -->
+      <div class="common-confusion-box">
+        <strong>⚠️ Beginner Mistake:</strong> Believing Token Bucket smooths out traffic into a flat, steady stream.<br />
+        Token Bucket <em>permits</em> bursts! If you need perfectly uniform, smoothed traffic with zero bursts (like video streaming or steady database bulk inserts), use the <strong>Leaky Bucket</strong> algorithm instead. <em>(Leaky Bucket smooths out bursty traffic into a constant, steady outflow at a fixed rate, like a bucket leaking through a hole at the bottom at a steady drip).</em>
+      </div>
+
+      <!-- Key Takeaways -->
+      <div class="takeaway-card">
+        <div class="takeaway-title">🎯 Mission 4 Key Takeaways</div>
+        <ul>
+          <li>Token Bucket is the premier default choice for user-facing APIs where bursty actions are natural.</li>
+          <li>Sliding Window Counter dominates large-scale CDNs and high-volume edge proxies due to minimal Redis memory footprint.</li>
+          <li>Never use Fixed Window for sub-minute rate limiting due to the 2x boundary burst security flaw.</li>
+        </ul>
+      </div>
+
+      <div class="nav-btn-row">
+        <button class="btn btn-secondary" onclick="goToSection(3)">← Previous: Sliding Window</button>
+        <button class="btn btn-success btn-complete-mission" data-mission="4">✓ Complete Mission 4 (+75 XP)</button>
+        <button class="btn btn-primary" onclick="goToSection(5)">Next: Real-World Redis →</button>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
+         MISSION 5 — Real-World Distributed Redis (38–43 min)
+    ═══════════════════════════════════════════════════════════ -->
+    <section class="lesson-section" id="section-5" aria-labelledby="s5-title" role="tabpanel">
+
+      <div class="mission-card mission-5">
+        <div class="mission-num">05</div>
+        <div>
+          <div class="mission-eyebrow">Mission 5 · 34 to 39 Min</div>
+          <h2 class="mission-title-text" id="s5-title">🌐 Production Rate Limiting: Express.js, Redis &amp; Lua Scripts</h2>
+        </div>
+        <div class="mission-time-chip">100 XP · ⚡ Cloud Master Badge</div>
+      </div>
+
+      <div class="bouncer-row">
+        <div class="bouncer-figure">
+          <svg viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Bouncer Bhaiya">
+            <path d="M15 110 C 15 80, 30 70, 50 70 C 70 70, 85 80, 85 110 Z" fill="#1c1838" stroke="#8b5cf6" stroke-width="3"/>
+            <path d="M42 70 L50 85 L58 70" stroke="#8b5cf6" stroke-width="2" fill="#251f47"/>
+            <rect x="46" y="86" width="8" height="12" rx="2" fill="#ffd60a"/>
+            <rect x="42" y="55" width="16" height="18" fill="#e09f67" rx="3"/>
+            <ellipse cx="50" cy="42" rx="22" ry="24" fill="#f0b27a"/>
+            <path d="M26 36 C 26 20, 36 14, 50 14 C 64 14, 74 20, 74 36 C 68 28, 58 26, 50 26 C 42 26, 32 28, 26 36 Z" fill="#0d0a1a"/>
+            <circle cx="27" cy="42" r="5" fill="#e09f67"/>
+            <circle cx="73" cy="42" r="5" fill="#e09f67"/>
+            <path d="M32 38 Q 40 34 47 38 L 47 44 Q 40 48 33 45 Z" fill="#111" stroke="#ffd60a" stroke-width="1.8"/>
+            <path d="M53 38 Q 60 34 68 38 L 67 45 Q 60 48 53 44 Z" fill="#111" stroke="#ffd60a" stroke-width="1.8"/>
+            <line x1="47" y1="39" x2="53" y2="39" stroke="#ffd60a" stroke-width="2"/>
+            <path d="M36 54 C 42 51, 47 53, 50 56 C 53 53, 58 51, 64 54 C 68 56, 67 60, 60 58 C 54 56, 52 58, 50 57 C 48 58, 46 56, 40 58 C 33 60, 32 56, 36 54 Z" fill="#0d0a1a"/>
+            <path d="M44 63 Q 50 66 56 63" stroke="#8c4e28" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="bouncer-bubble">
+          "Jab ChaiPay ke 50 server pods chal rahe hote hain, toh in-memory JavaScript variables dher ho jaate hain! Ek request Pod 1 pe jayegi, doosri Pod 2 pe. Dono ko pata hi nahi ki user ne 10 baar try kar liya! Yahan entry hoti hai centralized Redis ki!"
+        </div>
+      </div>
+
+      <p>
+        <strong>The Multi-Server Trap:</strong> In your local Node.js app, <code>const rateLimits = new Map()</code> works fine.
+        In production, a load balancer distributes traffic across 10 or 100 server instances.
+      </p>
+
+      <div class="simple-words-box">
+        <strong>In simple words:</strong> A Race Condition (TOCTOU: Time-of-Check to Time-of-Use) happens when two servers check the token count at the exact same millisecond: both see 1 token left, and both approve — double-spending the quota!
+      </div>
+
+      <div class="simple-words-box" style="margin-top:0.75rem;">
+        <strong>In simple words:</strong> An Atomic Operation is a command that executes completely from start to finish without any other server being able to interrupt in the middle.
+      </div>
+
+      <!-- Express Middleware Code Block -->
+      <div class="card">
+        <div class="card-title">🚀 Express.js Production Middleware (Token Bucket)</div>
+        <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:1rem;">
+          How you wire a Token Bucket rate limiter into an Express.js backend with standard 429 status and response headers <em>(runnable version available in <code>examples/server.js</code>)</em>:
+        </p>
+
+        <div class="code-wrap">
+          <button class="copy-btn" aria-label="Copy Express middleware code">Copy</button>
+          <pre><code>const express = require('express');
+const { TokenBucket } = require('./js/ratelimiter');
+
+// Map storing an in-memory TokenBucket per client: Map&lt;string, TokenBucket&gt;
+const clientBuckets = new Map();
+const CAPACITY = 10;
+const REFILL_RATE = 2; // 2 tokens per second
+
+function rateLimiterMiddleware(req, res, next) {
+  // Key choice: client IP, authenticated user ID, or API key
+  const clientKey = req.headers['x-api-key'] || req.user?.id || req.ip;
+
+  if (!clientBuckets.has(clientKey)) {
+    clientBuckets.set(clientKey, new TokenBucket(CAPACITY, REFILL_RATE));
+  }
+  const bucket = clientBuckets.get(clientKey);
+
+  // Common Rate Limiting HTTP Headers
+  res.setHeader('X-RateLimit-Limit', CAPACITY);
+
+  if (bucket.allowRequest(1)) {
+    res.setHeader('X-RateLimit-Remaining', bucket.getRemaining());
+    return next();
+  }
+
+  // Rate limit exceeded (HTTP 429)
+  const retryAfter = bucket.secondsUntilAvailable(1);
+  res.setHeader('X-RateLimit-Remaining', 0);
+  res.setHeader('Retry-After', retryAfter); // Standard HTTP header (RFC 7231)
+
+  return res.status(429).json({
+    error: 'Too Many Requests',
+    message: 'ChaiPay rate limit exceeded. Please slow down.',
+    retryAfterSeconds: retryAfter
+  });
+}</code></pre>
+        </div>
+
+        <!-- Per-IP vs Per-User vs Per-API-Key Comparison Grid -->
+        <div style="margin-top:1.25rem;">
+          <h4 style="font-size:0.95rem; margin-bottom:0.6rem;">🔑 Choosing Your Rate Limiter Key:</h4>
+          <div class="use-case-grid">
+            <div class="use-case-card">
+              <h4>🌐 Per-IP (req.ip)</h4>
+              <p><strong>Pros:</strong> Works on unauthenticated endpoints (signup/login).<br /><strong>Cons:</strong> College hostels and corporate offices share one public IP (NAT), unfairly throttling all students together. Mobile networks also rotate IPs rapidly.</p>
+            </div>
+            <div class="use-case-card">
+              <h4>👤 Per-User ID (req.user.id)</h4>
+              <p><strong>Pros:</strong> Fair per customer across devices; attackers cannot bypass by switching IPs or using a VPN.<br /><strong>Cons:</strong> Only works for logged-in users; useless on public <code>/login</code> endpoints.</p>
+            </div>
+            <div class="use-case-card">
+              <h4>🏷️ Per-API-Key (x-api-key)</h4>
+              <p><strong>Pros:</strong> Industry gold standard for B2B developer platforms (Stripe, GitHub); permits tiered limits (Free vs Pro tiers).<br /><strong>Cons:</strong> Requires managing and securely issuing API keys.</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Memory Leak Warning & Cleanup Strategy -->
+        <div class="simple-words-box" style="margin-top:1rem; border-color:var(--danger); background:var(--danger-bg);">
+          <strong>⚠️ In simple words: Memory Leak Danger with In-Memory Maps!</strong><br />
+          If 1 million distinct IPs hit your server over a month, <code>clientBuckets.set(ip, ...)</code> retains 1 million objects forever in RAM. In Node.js, always implement a cleanup strategy: a periodic interval deleting idle buckets whose tokens have refilled back to full, an LRU cache with a maximum size ceiling, or offload state to Redis with automatic TTL expiration.
+        </div>
+      </div>
+
+      <!-- Distributed Redis & Lua Script -->
+      <div class="card">
+        <div class="card-title">⚡ Distributed Redis: Fixed Window Counter (Lua Script)</div>
+        <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:1rem;">
+          Why Redis Lua scripts? Because Redis runs Lua scripts <strong>atomically</strong> on a single thread. No other server pod can read or write in the middle!
+        </p>
+
+        <div class="code-wrap">
+          <button class="copy-btn" aria-label="Copy Redis Lua script">Copy</button>
+          <pre><code>-- KEYS[1]: User rate limit key (e.g. "rl:user:9876")
+-- ARGV[1]: Window size in seconds (e.g. 60)
+-- ARGV[2]: Max allowed requests (e.g. 10)
+
+local current = redis.call('INCR', KEYS[1])
+
+-- CRITICAL: Only set EXPIRE on the FIRST request of the window!
+if current == 1 then
+  redis.call('EXPIRE', KEYS[1], ARGV[1])
+end
+
+if current &gt; tonumber(ARGV[2]) then
+  return 0  -- REJECT (HTTP 429)
+else
+  return 1  -- ALLOW (HTTP 200)
+end</code></pre>
+        </div>
+
+        <!-- Why set EXPIRE only when current == 1 -->
+        <div class="simple-words-box" style="margin-top:1rem; border-color:var(--saffron); background:var(--saffron-bg);">
+          <strong>💡 Why only set EXPIRE when current == 1?</strong><br />
+          If you called <code>EXPIRE</code> on every request, an attacker sending 1 request every 10 seconds would constantly push the TTL timer forward back to 60s! The key would live in Redis forever, and the user's quota would never reset back to 0. By checking <code>if current == 1</code>, the timer starts only on the first request and counts down steadily to 0, guaranteeing an honest reset window.
+        </div>
+
+        <!-- Fixed Window Boundary Burst Weakness & Fixes Callout -->
+        <div class="simple-words-box" style="margin-top:0.75rem; border-color:var(--warn); background:var(--surface2);">
+          <strong>⚠️ Architecture Alert: Fixed Window Boundary Weakness!</strong><br />
+          Notice this simple Redis script is a <strong>Fixed Window counter</strong>, meaning it still carries the boundary burst vulnerability from Mission 3 (an attacker can send 2x the limit across the window edge). To fix this in production Redis:
+          <ul style="margin:0.4rem 0 0 1.2rem; font-size:0.85rem;">
+            <li><strong>Option A (Exact):</strong> Use a Redis Sorted Set (<code>ZSET</code>) storing each timestamp as both score and member, pruning with <code>ZREMRANGEBYSCORE</code>.</li>
+            <li><strong>Option B (O(1) Memory):</strong> Use the Sliding Window Counter weighted two-key approach (storing <code>current_window</code> and <code>previous_window</code> counters).</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="simple-words-box">
+        <strong>In simple words:</strong> Clock Skew means tiny millisecond differences between physical server clocks on AWS; this script is completely immune to physical server clock skew because Redis server TTL handles expiration internally on its own clock!
+      </div>
+
+      <!-- Think About It Box -->
+      <div class="think-pause-box">
+        <div class="think-q">
+          🤔 <strong>Think About It:</strong> What happens to Redis memory if you rate-limit by IP address without an <code>EXPIRE</code> TTL?
+        </div>
+        <div class="think-answer">
+          Memory leak catastrophe! Over weeks, millions of unique IP addresses from mobile cellular networks visit your site. If keys never expire, Redis will eventually fill all 16GB of RAM with stale IP addresses, run out of memory (OOM), and crash your entire production database.
+        </div>
+        <button class="think-reveal-btn">👉 Click to reveal Bouncer Bhaiya's answer</button>
+      </div>
+
+      <!-- Common Confusion Box -->
+      <div class="common-confusion-box">
+        <strong>⚠️ Beginner Mistake:</strong> Executing <code>await redis.get()</code> followed by <code>await redis.set()</code> in JavaScript.<br />
+        Between your <code>get</code> and your <code>set</code>, fifty other server pods can execute! That is the textbook definition of a race condition. Always bundle multi-step operations into a single atomic Redis Lua script.
+      </div>
+
+      <!-- Why Does This Matter? Collapsible -->
+      <details class="why-matter-box">
+        <summary>🏢 Why does this matter in real products? (Flash Sales &amp; Payment Gateways)</summary>
+        <div style="margin-top:0.6rem;">
+          During major e-commerce flash sales and festival ticket bookings, thousands of backend server pods concurrently process checkout and payment callbacks. Atomic Redis scripts guarantee accurate counters and idempotency, ensuring no user is double-charged even if their mobile app double-taps "Pay Now".
+        </div>
+      </details>
+
+      <!-- Key Takeaways -->
+      <div class="takeaway-card">
+        <div class="takeaway-title">🎯 Mission 5 Key Takeaways</div>
+        <ul>
+          <li>In-memory rate limiters fail across multiple server nodes; centralized storage like Redis is required.</li>
+          <li>Redis Lua scripts eliminate race conditions (TOCTOU) by executing read-and-update steps atomically.</li>
+          <li>Set TTL only on the first request (<code>current == 1</code>) so the countdown timer does not reset indefinitely.</li>
+        </ul>
+      </div>
+
+      <div class="nav-btn-row">
+        <button class="btn btn-secondary" onclick="goToSection(4)">← Previous: Comparison</button>
+        <button class="btn btn-success btn-complete-mission" data-mission="5">✓ Complete Mission 5 (+100 XP)</button>
+        <button class="btn btn-primary" onclick="goToSection(6)">Next: Final Challenge →</button>
+      </div>
+    </section>
+
+    <!-- ════════════════════════════════════════════════════════
+         MISSION 6 — Knowledge Check, Challenge & Cheat Sheet (43–45 min)
+    ═══════════════════════════════════════════════════════════ -->
+    <section class="lesson-section" id="section-6" aria-labelledby="s6-title" role="tabpanel">
+
+      <div class="mission-card mission-6">
+        <div class="mission-num">06</div>
+        <div>
+          <div class="mission-eyebrow">Mission 6 · 39 to 45 Min</div>
+          <h2 class="mission-title-text" id="s6-title">🧠 Bouncer Academy Finals: Quiz &amp; Code Challenge</h2>
+        </div>
+        <div class="mission-time-chip">125 XP · 🏆 ChaiPay Certified</div>
+      </div>
+
+      <div class="bouncer-row">
+        <div class="bouncer-figure">
+          <svg viewBox="0 0 100 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-label="Bouncer Bhaiya">
+            <path d="M15 110 C 15 80, 30 70, 50 70 C 70 70, 85 80, 85 110 Z" fill="#1c1838" stroke="#ff7a2b" stroke-width="3"/>
+            <path d="M42 70 L50 85 L58 70" stroke="#ff7a2b" stroke-width="2" fill="#251f47"/>
+            <rect x="46" y="86" width="8" height="12" rx="2" fill="#ffd60a"/>
+            <rect x="42" y="55" width="16" height="18" fill="#e09f67" rx="3"/>
+            <ellipse cx="50" cy="42" rx="22" ry="24" fill="#f0b27a"/>
+            <path d="M26 36 C 26 20, 36 14, 50 14 C 64 14, 74 20, 74 36 C 68 28, 58 26, 50 26 C 42 26, 32 28, 26 36 Z" fill="#0d0a1a"/>
+            <circle cx="27" cy="42" r="5" fill="#e09f67"/>
+            <circle cx="73" cy="42" r="5" fill="#e09f67"/>
+            <path d="M32 38 Q 40 34 47 38 L 47 44 Q 40 48 33 45 Z" fill="#111" stroke="#ffd60a" stroke-width="1.8"/>
+            <path d="M53 38 Q 60 34 68 38 L 67 45 Q 60 48 53 44 Z" fill="#111" stroke="#ffd60a" stroke-width="1.8"/>
+            <line x1="47" y1="39" x2="53" y2="39" stroke="#ffd60a" stroke-width="2"/>
+            <path d="M36 54 C 42 51, 47 53, 50 56 C 53 53, 58 51, 64 54 C 68 56, 67 60, 60 58 C 54 56, 52 58, 50 57 C 48 58, 46 56, 40 58 C 33 60, 32 56, 36 54 Z" fill="#0d0a1a"/>
+            <path d="M44 63 Q 50 66 56 63" stroke="#8c4e28" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </div>
+        <div class="bouncer-bubble">
+          "Aakhri padaav pe aa gaye ho, dost! Pehle ye 5 MCQs hal karo (turant feedback milega). Fir Token Bucket ka code complete karo. 4/5 laane par special celebration confetti milega!"
+        </div>
+      </div>
+
+      <!-- Part A: Quiz with Instant Feedback -->
+      <div class="card">
+        <div class="card-title">📝 Part 1: Conceptual Mastery Quiz (Instant Feedback)</div>
+        <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:1.25rem;">
+          Pick your answer for each question. Answers are hidden until you select an option, giving you immediate feedback, explanations, and Bouncer Bhaiya's reaction!
+        </p>
+
+        <div class="quiz-container" id="quiz-container">
+          <!-- Question 1 -->
+          <div class="quiz-q" id="q1">
+            <div class="quiz-q-header">
+              <span class="quiz-q-num-badge">Q1</span>
+              <span class="quiz-q-progress">Question 1 of 5</span>
+            </div>
+            <div class="quiz-q-text">A Token Bucket has capacity 5 and refill rate 1 token/sec. At t = 0s, 5 requests arrive and drain the bucket to 0. At t = 2s, how many requests can be allowed?</div>
+            <div class="quiz-options">
+              <label class="quiz-option" data-q="1" data-val="A"><input type="radio" name="q1" value="A" /> A) 0 tokens (bucket takes 5 seconds to refill)</label>
+              <label class="quiz-option" data-q="1" data-val="B"><input type="radio" name="q1" value="B" /> B) 2 tokens (refilled at 1 token/sec for 2 seconds)</label>
+              <label class="quiz-option" data-q="1" data-val="C"><input type="radio" name="q1" value="C" /> C) 5 tokens (it automatically resets when empty)</label>
+              <label class="quiz-option" data-q="1" data-val="D"><input type="radio" name="q1" value="D" /> D) 1 token (refill only triggers once every 2 seconds)</label>
+            </div>
+            <div class="quiz-feedback" id="q1-exp"></div>
+          </div>
+
+          <!-- Question 2 -->
+          <div class="quiz-q" id="q2">
+            <div class="quiz-q-header">
+              <span class="quiz-q-num-badge">Q2</span>
+              <span class="quiz-q-progress">Question 2 of 5</span>
+            </div>
+            <div class="quiz-q-text">What is the fundamental vulnerability of the Fixed Window Counter algorithm?</div>
+            <div class="quiz-options">
+              <label class="quiz-option" data-q="2" data-val="A"><input type="radio" name="q2" value="A" /> A) It consumes too much memory by storing timestamps</label>
+              <label class="quiz-option" data-q="2" data-val="B"><input type="radio" name="q2" value="B" /> B) Boundary bursts can allow up to 2x the limit across window boundaries</label>
+              <label class="quiz-option" data-q="2" data-val="C"><input type="radio" name="q2" value="C" /> C) It cannot handle Redis distributed locks</label>
+              <label class="quiz-option" data-q="2" data-val="D"><input type="radio" name="q2" value="D" /> D) It does not support HTTP 429 response codes</label>
+            </div>
+            <div class="quiz-feedback" id="q2-exp"></div>
+          </div>
+
+          <!-- Question 3 -->
+          <div class="quiz-q" id="q3">
+            <div class="quiz-q-header">
+              <span class="quiz-q-num-badge">Q3</span>
+              <span class="quiz-q-progress">Question 3 of 5</span>
+            </div>
+            <div class="quiz-q-text">Which HTTP header informs the client how many seconds to pause before sending another request?</div>
+            <div class="quiz-options">
+              <label class="quiz-option" data-q="3" data-val="A"><input type="radio" name="q3" value="A" /> A) X-RateLimit-Remaining</label>
+              <label class="quiz-option" data-q="3" data-val="B"><input type="radio" name="q3" value="B" /> B) Cache-Control: max-age</label>
+              <label class="quiz-option" data-q="3" data-val="C"><input type="radio" name="q3" value="C" /> C) Retry-After</label>
+              <label class="quiz-option" data-q="3" data-val="D"><input type="radio" name="q3" value="D" /> D) X-RateLimit-Reset-Period</label>
+            </div>
+            <div class="quiz-feedback" id="q3-exp"></div>
+          </div>
+
+          <!-- Question 4 -->
+          <div class="quiz-q" id="q4">
+            <div class="quiz-q-header">
+              <span class="quiz-q-num-badge">Q4</span>
+              <span class="quiz-q-progress">Question 4 of 5</span>
+            </div>
+            <div class="quiz-q-text">Why do production backends use Redis Lua scripts instead of standard Node.js get/set calls?</div>
+            <div class="quiz-options">
+              <label class="quiz-option" data-q="4" data-val="A"><input type="radio" name="q4" value="A" /> A) Lua scripts run in parallel on all CPU cores</label>
+              <label class="quiz-option" data-q="4" data-val="B"><input type="radio" name="q4" value="B" /> B) Lua scripts execute atomically in Redis, preventing race conditions (TOCTOU)</label>
+              <label class="quiz-option" data-q="4" data-val="C"><input type="radio" name="q4" value="C" /> C) Lua automatically compresses the JSON body</label>
+              <label class="quiz-option" data-q="4" data-val="D"><input type="radio" name="q4" value="D" /> D) Redis cannot increment counters without Lua</label>
+            </div>
+            <div class="quiz-feedback" id="q4-exp"></div>
+          </div>
+
+          <!-- Question 5 -->
+          <div class="quiz-q" id="q5">
+            <div class="quiz-q-header">
+              <span class="quiz-q-num-badge">Q5</span>
+              <span class="quiz-q-progress">Question 5 of 5</span>
+            </div>
+            <div class="quiz-q-text">What simplifying assumption does Sliding Window Counter make to achieve O(1) memory?</div>
+            <div class="quiz-options">
+              <label class="quiz-option" data-q="5" data-val="A"><input type="radio" name="q5" value="A" /> A) Requests only happen at the exact start of a minute</label>
+              <label class="quiz-option" data-q="5" data-val="B"><input type="radio" name="q5" value="B" /> B) Requests in the previous window were uniformly distributed across time</label>
+              <label class="quiz-option" data-q="5" data-val="C"><input type="radio" name="q5" value="C" /> C) Tokens never decay over time</label>
+              <label class="quiz-option" data-q="5" data-val="D"><input type="radio" name="q5" value="D" /> D) The server clock never changes timezone</label>
+            </div>
+            <div class="quiz-feedback" id="q5-exp"></div>
+          </div>
+        </div>
+
+        <div class="btn-group" style="margin-top:1.5rem;">
+          <button class="btn btn-primary" id="btn-submit-quiz">Submit Quiz</button>
+          <button class="btn btn-secondary" id="btn-reset-quiz">Reset Answers</button>
+        </div>
+
+        <div class="quiz-score" id="quiz-score" style="display:none; margin-top:1.25rem;">
+          <div class="score-num" id="score-num">0 / 5</div>
+          <div class="score-msg" id="score-msg"></div>
+        </div>
+      </div>
+
+      <!-- Part B: Coding Challenge with 3 Progressive Hints -->
+      <div class="card" style="margin-top:2rem;">
+        <div class="card-title">💻 Part 2: Build Your Own Rate Limiter: Implement allowRequest()</div>
+        <p style="font-size:0.88rem; color:var(--text-muted); margin-bottom:1rem;">
+          Implement the <code>allowRequest()</code> method for the <code>TokenBucket</code> class below using lazy refill.
+          Need guidance? Use our 3 progressive hints before revealing the full reference solution!
+        </p>
+
+        <!-- 3 Progressive Hints Section -->
+        <div class="hint-flow-container">
+          <div class="hint-header">
+            <button class="btn btn-secondary" id="btn-reveal-hint">💡 Need a Hint? (Unlock Hint 1/3)</button>
+            <span class="hint-counter" id="hint-counter">0 / 3 hints used</span>
+          </div>
+
+          <div class="hint-cards" id="hint-cards">
+            <!-- Hint 1 -->
+            <div class="hint-card" id="hint-1">
+              <strong>Hint 1: Measuring Elapsed Time in Seconds:</strong><br />
+              Call <code>const now = this.clock();</code> to get the current timestamp in milliseconds. Then calculate elapsed time in seconds: <code>const elapsed = (now - this.lastRefill) / 1000;</code>.
+            </div>
+
+            <!-- Hint 2 -->
+            <div class="hint-card" id="hint-2">
+              <strong>Hint 2: Refilling Tokens &amp; Capping:</strong><br />
+              Compute new tokens: <code>this.tokens = Math.min(this.capacity, this.tokens + elapsed * this.refillRate);</code>.
+              Crucial: remember to update <code>this.lastRefill = now;</code> so you don't double-count elapsed time!
+            </div>
+
+            <!-- Hint 3 -->
+            <div class="hint-card" id="hint-3">
+              <strong>Hint 3: Consuming Tokens &amp; Returning Boolean:</strong><br />
+              Check if you have at least 1 token: <code>if (this.tokens &gt;= 1) { this.tokens -= 1; return true; }</code>. Otherwise, return <code>false</code>.
+            </div>
+          </div>
+        </div>
+
+        <!-- In-browser Code Editor -->
+        <div class="editor-wrap">
+          <textarea id="challenge-code" rows="18" spellcheck="false" aria-label="Code editor for Token Bucket challenge">class TokenBucket {
+  constructor(capacity, refillRate, clock = Date.now) {
+    this.capacity   = capacity;    // Max tokens bucket can hold
+    this.refillRate = refillRate;  // Tokens added per second
+    this.clock      = clock;       // Injectable clock function returning ms
+    this.tokens     = capacity;    // Starts full
+    this.lastRefill = clock();     // Timestamp of last refill (ms)
+  }
+
+  allowRequest() {
+    // TODO: Step 1 - Get current time from this.clock()
+    // TODO: Step 2 - Calculate elapsed seconds since this.lastRefill
+    // TODO: Step 3 - Refill tokens: min(this.capacity, this.tokens + elapsed * this.refillRate)
+    // TODO: Step 4 - Update this.lastRefill = now
+    // TODO: Step 5 - If this.tokens >= 1, decrement 1 and return true; else return false
+
+    return false; // Replace this line!
+  }
+}</textarea>
+        </div>
+
+        <div class="btn-group" style="margin-top:1rem;">
+          <button class="btn btn-primary" id="btn-run-tests">▶️ Run Tests (5 Test Cases)</button>
+          <button class="btn btn-secondary" id="btn-show-solution">💡 Show Reference Solution</button>
+          <button class="btn btn-secondary" id="btn-clear-editor">🔄 Reset Editor</button>
+        </div>
+
+        <!-- Reference Solution Box -->
+        <div class="solution-box" id="solution-box" style="display:none; margin-top:1rem;">
+          <h4 style="color:var(--gold); margin-bottom:0.5rem;">💡 Bouncer Bhaiya's Reference Solution:</h4>
+          <div class="code-wrap">
+            <button class="copy-btn" aria-label="Copy solution code">Copy</button>
+            <pre><code>allowRequest() {
+  const now     = this.clock();
+  const elapsed = (now - this.lastRefill) / 1000;
+  this.tokens   = Math.min(this.capacity, this.tokens + elapsed * this.refillRate);
+  this.lastRefill = now;
+
+  if (this.tokens &gt;= 1) {
+    this.tokens -= 1;
+    return true;
+  }
+  return false;
+}</code></pre>
+          </div>
+        </div>
+
+        <!-- Test Results Output -->
+        <div class="test-results" id="test-results" style="display:none; margin-top:1.25rem;"></div>
+      </div>
+
+      <!-- Part C: Downloadable / Printable Cheat Sheet Card -->
+      <div class="card cheat-sheet-card" id="cheat-sheet">
+        <div class="cheat-sheet-header">
+          <div>
+            <div class="card-title">📌 Bonus (Optional): Rate Limiter Cheat Sheet</div>
+            <p style="font-size:0.85rem; color:var(--text-muted);">
+              One-page architectural reference for system design interviews and backend projects.
+            </p>
+          </div>
+          <div class="cheat-sheet-actions">
+            <button class="btn btn-secondary btn-sm" id="btn-copy-cheatsheet">📋 Copy Markdown Cheat Sheet</button>
+            <button class="btn btn-secondary btn-sm" id="btn-print-cheatsheet" onclick="window.print()">🖨️ Print / Save PDF</button>
+          </div>
+        </div>
+
+        <div style="overflow-x:auto;">
+          <table class="cheat-sheet-table">
+            <thead>
+              <tr>
+                <th>Algorithm</th>
+                <th>Memory</th>
+                <th>Time Complexity</th>
+                <th>Burst Handling</th>
+                <th>Boundary Burst Safe?</th>
+                <th>When to Choose</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>Token Bucket</strong></td>
+                <td><span class="badge badge-success">O(1)</span></td>
+                <td><span class="badge badge-success">O(1)</span></td>
+                <td>Allows bursts up to capacity</td>
+                <td>✅ Yes (Continuous lazy refill)</td>
+                <td>Default for public APIs (Stripe, GitHub, AWS API Gateway)</td>
+              </tr>
+              <tr>
+                <td><strong>Fixed Window</strong></td>
+                <td><span class="badge badge-success">O(1)</span></td>
+                <td><span class="badge badge-success">O(1)</span></td>
+                <td>Resets at boundary edge</td>
+                <td>❌ NO (Leaks 2x limit at boundaries)</td>
+                <td>Simple daily/monthly quotas resetting at midnight</td>
+              </tr>
+              <tr>
+                <td><strong>Sliding Window Log</strong></td>
+                <td><span class="badge badge-danger">O(N)</span></td>
+                <td><span class="badge badge-warning">O(1) amortized (array) / O(log N) (Redis ZSET)</span></td>
+                <td>Strict enforcement (blocks burst)</td>
+                <td>✅ 100% Exact Precision</td>
+                <td>High-security financial transfers &amp; credit card APIs</td>
+              </tr>
+              <tr>
+                <td><strong>Sliding Window Counter</strong></td>
+                <td><span class="badge badge-success">O(1)</span></td>
+                <td><span class="badge badge-success">O(1)</span></td>
+                <td>Smooth weighted rolling average</td>
+                <td>✅ Yes (~99.95% accuracy)</td>
+                <td>High-scale edge CDNs, Cloudflare, and massive public APIs</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Certificate of Completion -->
+      <div class="takeaway-card" style="margin-top:2rem; border-color:var(--gold); background:var(--gold-bg);">
+        <div class="takeaway-title" style="color:var(--gold);">🏆 ChaiPay Engineering Academy Certificate</div>
+        <p style="font-size:0.95rem; line-height:1.6; margin-bottom:0.5rem;">
+          <strong>Congratulations, Engineer!</strong> You have completed the 45-minute Rate Limiter Masterclass. You now understand how to protect production APIs from Tatkal surges, credential stuffing attacks, and runaway client bots.
+        </p>
+        <p style="font-size:0.85rem; color:var(--text-muted);">
+          Share your accomplishment with your peers and bookmark this playground for your upcoming backend system design interviews!
+        </p>
+      </div>
+
+      <div class="nav-btn-row">
+        <button class="btn btn-secondary" onclick="goToSection(5)">← Previous: Real-World Redis</button>
+        <button class="btn btn-primary" onclick="goToSection(0)">🔄 Review From Mission 0</button>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<!-- ════════════════════════ SCRIPTS ════════════════════════ -->
+<!-- Load core algorithm definitions first (shared with test suite) -->
+<script src="js/ratelimiter.js"></script>
+<!-- Main story, gamification and simulator interaction script -->
+<script src="script.js"></script>
+</body>
+</html>
